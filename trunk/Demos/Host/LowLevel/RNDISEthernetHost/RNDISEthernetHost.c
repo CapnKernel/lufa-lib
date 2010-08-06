@@ -112,7 +112,8 @@ void EVENT_USB_Host_HostError(const uint8_t ErrorCode)
 /** Event handler for the USB_DeviceEnumerationFailed event. This indicates that a problem occurred while
  *  enumerating an attached USB device.
  */
-void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode, const uint8_t SubErrorCode)
+void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode,
+                                            const uint8_t SubErrorCode)
 {
 	printf_P(PSTR(ESC_FG_RED "Dev Enum Error\r\n"
 	                         " -- Error Code %d\r\n"
@@ -155,7 +156,7 @@ void PrintIncomingPackets(void)
 		Pipe_Read_Stream_LE(&PacketBuffer, PacketLength);
 		
 		for (uint16_t i = 0; i < PacketLength; i++)
-		  printf("%02x ", PacketBuffer[i]);
+		  printf("0x%02x ", PacketBuffer[i]);
 	}
 	
 	Pipe_ClearIN();

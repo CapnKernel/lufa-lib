@@ -50,13 +50,13 @@
 		#include "IP.h"
 		
 	/* Macros: */
-		/** Physical MAC address of the USB RNDIS network adapter */
+		/** Physical MAC address of the USB RNDIS network adapter. */
 		#define ADAPTER_MAC_ADDRESS              {0x02, 0x00, 0x02, 0x00, 0x02, 0x00}
 	
-		/** Physical MAC address of the virtual server on the network */
+		/** Physical MAC address of the virtual server on the network. */
 		#define SERVER_MAC_ADDRESS               {0x00, 0x01, 0x00, 0x01, 0x00, 0x01}		
 
-		/** Physical MAC address of the network broadcast address */
+		/** Physical MAC address of the network broadcast address. */
 		#define BROADCAST_MAC_ADDRESS            {0xFF, 0xFF, 0xFF, 0xFF, 0xFF, 0xFF}
 	
 		/** Performs a comparison between two MAC addresses, indicating if they are identical.
@@ -68,16 +68,16 @@
 		 */
 		#define MAC_COMPARE(MAC1, MAC2)          (memcmp(MAC1, MAC2, sizeof(MAC_Address_t)) == 0)
 
-		/** Maximum size of an incoming or outgoing Ethernet frame in bytes */
+		/** Maximum size of an incoming or outgoing Ethernet frame in bytes. */
 		#define ETHERNET_FRAME_SIZE_MAX          1500
 		
-		/** Minimum size of an Ethernet packet in bytes, to conform to the Ethernet V2 packet standard */
+		/** Minimum size of an Ethernet packet in bytes, to conform to the Ethernet V2 packet standard. */
 		#define ETHERNET_VER2_MINSIZE            0x0600
 		
-		/** Return value for all sub protocol handling routines, indicating that no response packet has been generated */
+		/** Return value for all sub protocol handling routines, indicating that no response packet has been generated. */
 		#define NO_RESPONSE                      0		
 
-		/** Return value for all sub protocol handling routines, indicating that the packet has not yet been handled */
+		/** Return value for all sub protocol handling routines, indicating that the packet has not yet been handled. */
 		#define NO_PROCESS                       -1
 
 	/* Type Defines: */
@@ -89,17 +89,12 @@
 			bool          FrameInBuffer; /**< Indicates if a frame is currently stored in the buffer */
 		} Ethernet_Frame_Info_t;
 
-		/** Type define for an Ethernet frame header */
+		/** Type define for an Ethernet frame header. */
 		typedef struct
 		{
 			MAC_Address_t Destination; /**< Physical MAC address of the packet recipient */
 			MAC_Address_t Source; /**< Physics MAC address of the packet source */
-			
-			union
-			{
-				uint16_t  EtherType; /**< Ethernet packet sub-protocol type, for Ethernet V2 packets */
-				uint16_t  Length; /**< Ethernet frame length, for Ethernet V1 packets */
-			};
+			uint16_t      EtherType; /**< Ethernet packet sub-protocol type, for Ethernet V2 packets */
 		} Ethernet_Frame_Header_t;
 		
 	/* External Variables: */
@@ -114,6 +109,7 @@
 		
 	/* Function Prototypes: */
 		void     Ethernet_ProcessPacket(void);
-		uint16_t Ethernet_Checksum16(void* Data, uint16_t Bytes);
+		uint16_t Ethernet_Checksum16(void* Data,
+		                             uint16_t Bytes);
 		
 #endif

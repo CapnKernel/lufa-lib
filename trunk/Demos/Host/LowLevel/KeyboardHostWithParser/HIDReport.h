@@ -43,11 +43,11 @@
 		#include "KeyboardHostWithParser.h"
 
 	/* Macros: */
-		/** HID Report Descriptor Usage Page value for a desktop keyboard */
+		/** HID Report Descriptor Usage Page value for a desktop keyboard. */
 		#define USAGE_PAGE_KEYBOARD             0x07
 
 	/* Enums: */
-		/** Enum for the possible return codes of the GetHIDReportData() function. */
+		/** Enum for the possible return codes of the \ref GetHIDReportData() function. */
 		enum KeyboardHostWithParser_GetHIDReportDataCodes_t
 		{
 			ParseSuccessful         = 0, /**< HID report descriptor parsed successfully */
@@ -77,6 +77,6 @@
 	/* Function Prototypes: */
 		uint8_t GetHIDReportData(void);
 
-		bool CALLBACK_HIDParser_FilterHIDReportItem(HID_ReportItem_t* CurrentItem);
+		bool CALLBACK_HIDParser_FilterHIDReportItem(HID_ReportItem_t* const CurrentItem);
 		
 #endif

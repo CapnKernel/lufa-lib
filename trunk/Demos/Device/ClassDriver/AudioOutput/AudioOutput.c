@@ -93,7 +93,7 @@ void ProcessNextSample(void)
 	/* Check if the sample reload timer period has elapsed, and that the USB bus is ready for a new sample */
 	if ((TIFR0 & (1 << OCF0A)) && Audio_Device_IsSampleReceived(&Speaker_Audio_Interface))
 	{
-		/* Clear the sample reload timer */
+		/* Clear the sample reload timer compare flag, ready for the next interval */
 		TIFR0 |= (1 << OCF0A);
 
 		/* Retrieve the signed 16-bit left and right audio samples, convert to 8-bit */
@@ -156,7 +156,7 @@ void EVENT_USB_Device_Connect(void)
 	/* PWM speaker timer initialization */
 	TCCR3A  = ((1 << WGM30) | (1 << COM3A1) | (1 << COM3A0)
 	        | (1 << COM3B1) | (1 << COM3B0)); // Set on match, clear on TOP
-	TCCR3B  = ((1 << WGM32) | (1 << CS30));  // Fast 8-Bit PWM, Fcpu speed
+	TCCR3B  = ((1 << WGM32) | (1 << CS30));  // Fast 8-Bit PWM, F_CPU speed
 #endif
 }
 

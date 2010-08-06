@@ -81,7 +81,7 @@ AVRISP_USB_Descriptor_Configuration_t PROGMEM AVRISP_ConfigurationDescriptor =
 			.ConfigurationNumber    = 1,
 			.ConfigurationStrIndex  = NO_DESCRIPTOR,
 				
-			.ConfigAttributes       = USB_CONFIG_ATTR_SELFPOWERED,
+			.ConfigAttributes       = USB_CONFIG_ATTR_BUSPOWERED,
 			
 			.MaxPowerConsumption    = USB_CONFIG_POWER_MA(100)
 		},
@@ -172,7 +172,9 @@ USB_Descriptor_String_t PROGMEM AVRISP_SerialString =
  *  is called so that the descriptor details can be passed back and the appropriate descriptor sent back to the
  *  USB host.
  */
-uint16_t AVRISP_GetDescriptor(const uint16_t wValue, const uint8_t wIndex, void** const DescriptorAddress)
+uint16_t AVRISP_GetDescriptor(const uint16_t wValue,
+                              const uint8_t wIndex,
+                              void** const DescriptorAddress)
 {
 	const uint8_t  DescriptorType   = (wValue >> 8);
 	const uint8_t  DescriptorNumber = (wValue & 0xFF);

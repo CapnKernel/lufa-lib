@@ -136,8 +136,7 @@ bool SCSI_DecodeSCSICommand(void)
  */
 static void SCSI_Command_Inquiry(void)
 {
-	uint16_t AllocationLength  = (((uint16_t)CommandBlock.SCSICommandData[3] << 8) |
-	                                         CommandBlock.SCSICommandData[4]);
+	uint16_t AllocationLength  = SwapEndian_16(*(uint16_t*)&CommandBlock.SCSICommandData[3]);
 	uint16_t BytesTransferred  = (AllocationLength < sizeof(InquiryData))? AllocationLength :
 	                                                                       sizeof(InquiryData);
 
@@ -159,7 +158,7 @@ static void SCSI_Command_Inquiry(void)
 	uint8_t PadBytes[AllocationLength - BytesTransferred];
 	
 	/* Pad out remaining bytes with 0x00 */
-	Endpoint_Write_Stream_LE(&PadBytes, (AllocationLength - BytesTransferred), StreamCallback_AbortOnMassStoreReset);
+	Endpoint_Write_Stream_LE(&PadBytes, sizeof(PadBytes), StreamCallback_AbortOnMassStoreReset);
 
 	/* Finalize the stream transfer to send the last packet */
 	Endpoint_ClearIN();
@@ -182,7 +181,7 @@ static void SCSI_Command_Request_Sense(void)
 	uint8_t PadBytes[AllocationLength - BytesTransferred];
 	
 	/* Pad out remaining bytes with 0x00 */
-	Endpoint_Write_Stream_LE(&PadBytes, (AllocationLength - BytesTransferred), StreamCallback_AbortOnMassStoreReset);
+	Endpoint_Write_Stream_LE(&PadBytes, sizeof(PadBytes), StreamCallback_AbortOnMassStoreReset);
 
 	/* Finalize the stream transfer to send the last packet */
 	Endpoint_ClearIN();
@@ -246,26 +245,16 @@ static void SCSI_Command_Send_Diagnostic(void)
 }
 
 /** Command processing for an issued SCSI READ (10) or WRITE (10) command. This command reads in the block start address
- *  and total number of blocks to process, then calls the appropriate low-level dataflash routine to handle the actual
+ *  and total number of blocks to process, then calls the appropriate low-level Dataflash routine to handle the actual
  *  reading and writing of the data.
  *
  *  \param[in] IsDataRead  Indicates if the command is a READ (10) command or WRITE (10) command (DATA_READ or DATA_WRITE)
  */
 static void SCSI_Command_ReadWrite_10(const bool IsDataRead)
 {
-	uint32_t BlockAddress;
-	uint16_t TotalBlocks;
-	
-	/* Load in the 32-bit block address (SCSI uses big-endian, so have to do it byte-by-byte) */
-	((uint8_t*)&BlockAddress)[3] = CommandBlock.SCSICommandData[2];
-	((uint8_t*)&BlockAddress)[2] = CommandBlock.SCSICommandData[3];
-	((uint8_t*)&BlockAddress)[1] = CommandBlock.SCSICommandData[4];
-	((uint8_t*)&BlockAddress)[0] = CommandBlock.SCSICommandData[5];
+	uint32_t BlockAddress = SwapEndian_32(*(uint32_t*)&CommandBlock.SCSICommandData[2]);
+	uint16_t TotalBlocks  = SwapEndian_16(*(uint16_t*)&CommandBlock.SCSICommandData[7]);
 
-	/* Load in the 16-bit total blocks (SCSI uses big-endian, so have to do it byte-by-byte) */
-	((uint8_t*)&TotalBlocks)[1]  = CommandBlock.SCSICommandData[7];
-	((uint8_t*)&TotalBlocks)[0]  = CommandBlock.SCSICommandData[8];
-	
 	/* Check if the block address is outside the maximum allowable value for the LUN */
 	if (BlockAddress >= LUN_MEDIA_BLOCKS)
 	{

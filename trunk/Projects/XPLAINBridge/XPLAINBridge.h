@@ -45,9 +45,9 @@
 		#include "AVRISPDescriptors.h"
 		#include "USARTDescriptors.h"
 
-		#include "Lib/RingBuff.h"
-		#include "Lib/SoftUART.h"		
-		#include <Lib/V2Protocol.h>
+		#include "Lib/LightweightRingBuff.h"
+		#include "Lib/SoftUART.h"
+		#include "Lib/V2Protocol.h"
 
 		#include <LUFA/Version.h>
 		#include <LUFA/Drivers/Board/LEDs.h>
@@ -74,21 +74,27 @@
 		#define MODE_USART_BRIDGE        false
 
 		/** Firmware mode define for the AVRISP Programmer mode. */
-		#define MODE_PDI_PROGRAMMER      true		
+		#define MODE_PDI_PROGRAMMER      true
 
 	/* External Variables: */
-		extern bool CurrentFirmwareMode;
+		extern bool       CurrentFirmwareMode;
+		extern RingBuff_t UARTtoUSB_Buffer;
+		extern RingBuff_t USBtoUART_Buffer;
 		
 	/* Function Prototypes: */
 		void SetupHardware(void);
 		void AVRISP_Task(void);
-		void USARTBridge_Task(void);
+		void UARTBridge_Task(void);
 
 		void EVENT_USB_Device_ConfigurationChanged(void);
 		void EVENT_USB_Device_UnhandledControlRequest(void);
 		void EVENT_USB_Device_Connect(void);
 		void EVENT_USB_Device_Disconnect(void);		
 
-		uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue, const uint8_t wIndex, void** const DescriptorAddress);
+		void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo);
+
+		uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
+		                                    const uint8_t wIndex,
+		                                    void** const DescriptorAddress) ATTR_WARN_UNUSED_RESULT ATTR_NON_NULL_PTR_ARG(3);
 
 #endif

@@ -37,16 +37,13 @@
 #define _V2_PROTOCOL_
 
 	/* Includes: */
-		#if !defined(__ASSEMBLER__)
-			#include <LUFA/Drivers/USB/USB.h>
-			#include <LUFA/Drivers/Peripheral/SPI.h>
+		#include <LUFA/Drivers/USB/USB.h>
 			
-			#include "../Descriptors.h"
-			#include "V2ProtocolConstants.h"
-			#include "V2ProtocolParams.h"
-			#include "ISP/ISPProtocol.h"
-			#include "XPROG/XPROGProtocol.h"
-		#endif
+		#include "../Descriptors.h"
+		#include "V2ProtocolConstants.h"
+		#include "V2ProtocolParams.h"
+		#include "ISP/ISPProtocol.h"
+		#include "XPROG/XPROGProtocol.h"
 
 	/* Preprocessor Checks: */
 		#if ((BOARD == BOARD_XPLAIN) || (BOARD == BOARD_XPLAIN_REV1))
@@ -63,42 +60,32 @@
 			#define _GETADCMUXMASK(x, y)        _GETADCMUXMASK2(x, y)
 		#endif
 
-		/** Programmer ID string, returned to the host during the CMD_SIGN_ON command processing */
+		/** Programmer ID string, returned to the host during the CMD_SIGN_ON command processing. */
 		#define PROGRAMMER_ID              "AVRISP_MK2"
 		
-		/** Timeout period for each issued command from the host before it is aborted */
-		#define COMMAND_TIMEOUT_MS         200
+		/** Timeout period for each issued command from the host before it is aborted (in 10ms ticks). */
+		#define COMMAND_TIMEOUT_TICKS      100
 		
-		/** Command timeout counter register, GPIOR for speed */
-		#define TimeoutMSRemaining         GPIOR0
+		/** Command timeout counter register, GPIOR for speed. */
+		#define TimeoutTicksRemaining      GPIOR1
 
-		/** MUX mask for the VTARGET ADC channel number */
+		/** MUX mask for the VTARGET ADC channel number. */
 		#define VTARGET_ADC_CHANNEL_MASK   _GETADCMUXMASK(ADC_CHANNEL, VTARGET_ADC_CHANNEL)
-		
-		#if !defined(WIN_AVRDUDE_COMPAT)
-			#define SELECT_DATA_OUT_ENDPOINT() Endpoint_SetEndpointDirection(ENDPOINT_DIR_OUT);
-		#else
-			#define SELECT_DATA_OUT_ENDPOINT() Endpoint_SelectEndpoint();
-		#endif
 
 	/* External Variables: */
-		#if !defined(__ASSEMBLER__)
-			extern uint32_t CurrentAddress;
-			extern bool     MustLoadExtendedAddress;
-		#endif
+		extern uint32_t CurrentAddress;
+		extern bool     MustLoadExtendedAddress;
 
 	/* Function Prototypes: */
-		#if !defined(__ASSEMBLER__)
-			void V2Protocol_Init(void);
-			void V2Protocol_ProcessCommand(void);
+		void V2Protocol_Init(void);
+		void V2Protocol_ProcessCommand(void);
 			
-			#if defined(INCLUDE_FROM_V2PROTOCOL_C)
-				static void V2Protocol_UnknownCommand(const uint8_t V2Command);
-				static void V2Protocol_SignOn(void);
-				static void V2Protocol_GetSetParam(const uint8_t V2Command);
-				static void V2Protocol_ResetProtection(void);
-				static void V2Protocol_LoadAddress(void);
-			#endif
+		#if defined(INCLUDE_FROM_V2PROTOCOL_C)
+			static void V2Protocol_UnknownCommand(const uint8_t V2Command);
+			static void V2Protocol_SignOn(void);
+			static void V2Protocol_GetSetParam(const uint8_t V2Command);
+			static void V2Protocol_ResetProtection(void);
+			static void V2Protocol_LoadAddress(void);
 		#endif
 
 #endif

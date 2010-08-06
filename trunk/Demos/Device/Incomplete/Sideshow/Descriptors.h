@@ -64,12 +64,12 @@
 		{
 			uint8_t                                FirstInterfaceNumber;
 
-			uint8_t                                RESERVED;
+			uint8_t                                Reserved;
 			
 			uint8_t                                CompatibleID[8];
 			uint8_t                                SubCompatibleID[8];			
 
-			uint8_t                                RESERVED2[6];
+			uint8_t                                Reserved2[6];
 		} USB_OSCompatibleSection_t;
 		
 		typedef struct
@@ -79,17 +79,18 @@
 			uint16_t                               Index;
 			uint8_t                                TotalSections;
 			
-			uint8_t                                RESERVED[7];
+			uint8_t                                Reserved[7];
 			
 			USB_OSCompatibleSection_t              SideshowCompatID;
 		} USB_OSCompatibleIDDescriptor_t;
 
 	/* Function Prototypes: */
-		uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue, const uint8_t wIndex, void** const DescriptorAddress)
-								            ATTR_WARN_UNUSED_RESULT ATTR_WEAK ATTR_NON_NULL_PTR_ARG(3);
+		uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
+		                                    const uint8_t wIndex,
+		                                    void** const DescriptorAddress) ATTR_WARN_UNUSED_RESULT ATTR_NON_NULL_PTR_ARG(3);
 
-		bool USB_GetOSFeatureDescriptor(const uint16_t wValue, const uint8_t wIndex,
-		                                void** const DescriptorAddress, uint16_t* const DescriptorSize)
-		                                ATTR_WARN_UNUSED_RESULT ATTR_WEAK ATTR_NON_NULL_PTR_ARG(3) ATTR_NON_NULL_PTR_ARG(4);
+		uint16_t USB_GetOSFeatureDescriptor(const uint16_t wValue,
+		                                    const uint8_t wIndex,
+		                                    void** const DescriptorAddress) ATTR_WARN_UNUSED_RESULT ATTR_NON_NULL_PTR_ARG(3);
 
 #endif

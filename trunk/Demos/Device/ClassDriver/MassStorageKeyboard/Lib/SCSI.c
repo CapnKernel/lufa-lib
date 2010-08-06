@@ -86,7 +86,7 @@ SCSI_Request_Sense_Response_t SenseData =
  *
  *  \param[in] MSInterfaceInfo  Pointer to the Mass Storage class interface structure that the command is associated with
  */
-bool SCSI_DecodeSCSICommand(USB_ClassInfo_MS_Device_t* MSInterfaceInfo)
+bool SCSI_DecodeSCSICommand(USB_ClassInfo_MS_Device_t* const MSInterfaceInfo)
 {
 	bool CommandSuccess = false;
 
@@ -146,10 +146,9 @@ bool SCSI_DecodeSCSICommand(USB_ClassInfo_MS_Device_t* MSInterfaceInfo)
  *
  *  \return Boolean true if the command completed successfully, false otherwise.
  */
-static bool SCSI_Command_Inquiry(USB_ClassInfo_MS_Device_t* MSInterfaceInfo)
+static bool SCSI_Command_Inquiry(USB_ClassInfo_MS_Device_t* const MSInterfaceInfo)
 {
-	uint16_t AllocationLength  = (((uint16_t)MSInterfaceInfo->State.CommandBlock.SCSICommandData[3] << 8) |
-	                                         MSInterfaceInfo->State.CommandBlock.SCSICommandData[4]);
+	uint16_t AllocationLength  = SwapEndian_16(*(uint16_t*)&MSInterfaceInfo->State.CommandBlock.SCSICommandData[3]);
 	uint16_t BytesTransferred  = (AllocationLength < sizeof(InquiryData))? AllocationLength :
 	                                                                       sizeof(InquiryData);
 
@@ -170,7 +169,7 @@ static bool SCSI_Command_Inquiry(USB_ClassInfo_MS_Device_t* MSInterfaceInfo)
 	uint8_t PadBytes[AllocationLength - BytesTransferred];
 	
 	/* Pad out remaining bytes with 0x00 */
-	Endpoint_Write_Stream_LE(&PadBytes, (AllocationLength - BytesTransferred), NO_STREAM_CALLBACK);
+	Endpoint_Write_Stream_LE(&PadBytes, sizeof(PadBytes), NO_STREAM_CALLBACK);
 
 	/* Finalize the stream transfer to send the last packet */
 	Endpoint_ClearIN();
@@ -188,7 +187,7 @@ static bool SCSI_Command_Inquiry(USB_ClassInfo_MS_Device_t* MSInterfaceInfo)
  *
  *  \return Boolean true if the command completed successfully, false otherwise.
  */
-static bool SCSI_Command_Request_Sense(USB_ClassInfo_MS_Device_t* MSInterfaceInfo)
+static bool SCSI_Command_Request_Sense(USB_ClassInfo_MS_Device_t* const MSInterfaceInfo)
 {
 	uint8_t  AllocationLength = MSInterfaceInfo->State.CommandBlock.SCSICommandData[4];
 	uint8_t  BytesTransferred = (AllocationLength < sizeof(SenseData))? AllocationLength : sizeof(SenseData);
@@ -196,7 +195,7 @@ static bool SCSI_Command_Request_Sense(USB_ClassInfo_MS_Device_t* MSInterfaceInf
 	uint8_t PadBytes[AllocationLength - BytesTransferred];
 
 	Endpoint_Write_Stream_LE(&SenseData, BytesTransferred, NO_STREAM_CALLBACK);
-	Endpoint_Write_Stream_LE(&PadBytes, (AllocationLength - BytesTransferred), NO_STREAM_CALLBACK);
+	Endpoint_Write_Stream_LE(&PadBytes, sizeof(PadBytes), NO_STREAM_CALLBACK);
 	Endpoint_ClearIN();
 
 	/* Succeed the command and update the bytes transferred counter */
@@ -212,7 +211,7 @@ static bool SCSI_Command_Request_Sense(USB_ClassInfo_MS_Device_t* MSInterfaceInf
  *
  *  \return Boolean true if the command completed successfully, false otherwise.
  */
-static bool SCSI_Command_Read_Capacity_10(USB_ClassInfo_MS_Device_t* MSInterfaceInfo)
+static bool SCSI_Command_Read_Capacity_10(USB_ClassInfo_MS_Device_t* const MSInterfaceInfo)
 {
 	uint32_t LastBlockAddressInLUN = (LUN_MEDIA_BLOCKS - 1);
 	uint32_t MediaBlockSize        = VIRTUAL_MEMORY_BLOCK_SIZE;
@@ -235,7 +234,7 @@ static bool SCSI_Command_Read_Capacity_10(USB_ClassInfo_MS_Device_t* MSInterface
  *
  *  \return Boolean true if the command completed successfully, false otherwise.
  */
-static bool SCSI_Command_Send_Diagnostic(USB_ClassInfo_MS_Device_t* MSInterfaceInfo)
+static bool SCSI_Command_Send_Diagnostic(USB_ClassInfo_MS_Device_t* const MSInterfaceInfo)
 {
 	uint8_t ReturnByte;
 
@@ -293,7 +292,7 @@ static bool SCSI_Command_Send_Diagnostic(USB_ClassInfo_MS_Device_t* MSInterfaceI
 }
 
 /** Command processing for an issued SCSI READ (10) or WRITE (10) command. This command reads in the block start address
- *  and total number of blocks to process, then calls the appropriate low-level dataflash routine to handle the actual
+ *  and total number of blocks to process, then calls the appropriate low-level Dataflash routine to handle the actual
  *  reading and writing of the data.
  *
  *  \param[in] MSInterfaceInfo  Pointer to the Mass Storage class interface structure that the command is associated with
@@ -301,20 +300,17 @@ static bool SCSI_Command_Send_Diagnostic(USB_ClassInfo_MS_Device_t* MSInterfaceI
  *
  *  \return Boolean true if the command completed successfully, false otherwise.
  */
-static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t* MSInterfaceInfo, const bool IsDataRead)
+static bool SCSI_Command_ReadWrite_10(USB_ClassInfo_MS_Device_t* const MSInterfaceInfo,
+                                      const bool IsDataRead)
 {
 	uint32_t BlockAddress;
 	uint16_t TotalBlocks;
 	
-	/* Load in the 32-bit block address (SCSI uses big-endian, so have to do it byte-by-byte) */
-	((uint8_t*)&BlockAddress)[3] = MSInterfaceInfo->State.CommandBlock.SCSICommandData[2];
-	((uint8_t*)&BlockAddress)[2] = MSInterfaceInfo->State.CommandBlock.SCSICommandData[3];
-	((uint8_t*)&BlockAddress)[1] = MSInterfaceInfo->State.CommandBlock.SCSICommandData[4];
-	((uint8_t*)&BlockAddress)[0] = MSInterfaceInfo->State.CommandBlock.SCSICommandData[5];
+	/* Load in the 32-bit block address (SCSI uses big-endian, so have to reverse the byte order) */
+	BlockAddress = SwapEndian_32(*(uint32_t*)&MSInterfaceInfo->State.CommandBlock.SCSICommandData[2]);
 
-	/* Load in the 16-bit total blocks (SCSI uses big-endian, so have to do it byte-by-byte) */
-	((uint8_t*)&TotalBlocks)[1]  = MSInterfaceInfo->State.CommandBlock.SCSICommandData[7];
-	((uint8_t*)&TotalBlocks)[0]  = MSInterfaceInfo->State.CommandBlock.SCSICommandData[8];
+	/* Load in the 16-bit total blocks (SCSI uses big-endian, so have to reverse the byte order) */
+	TotalBlocks  = SwapEndian_16(*(uint16_t*)&MSInterfaceInfo->State.CommandBlock.SCSICommandData[7]);
 	
 	/* Check if the block address is outside the maximum allowable value for the LUN */
 	if (BlockAddress >= LUN_MEDIA_BLOCKS)

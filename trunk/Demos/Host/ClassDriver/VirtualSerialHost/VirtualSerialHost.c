@@ -111,10 +111,9 @@ int main(void)
 				if (CDC_Host_BytesReceived(&VirtualSerial_CDC_Interface))
 				{
 					/* Echo received bytes from the attached device through the USART */
-					while (CDC_Host_BytesReceived(&VirtualSerial_CDC_Interface))
-					  putchar(CDC_Host_ReceiveByte(&VirtualSerial_CDC_Interface));
-					  
-					CDC_Host_Flush(&VirtualSerial_CDC_Interface);  
+					int16_t ReceivedByte = CDC_Host_ReceiveByte(&VirtualSerial_CDC_Interface);
+					if (!(ReceivedByte < 0))
+					  putchar(ReceivedByte);
 				}
 			
 				break;
@@ -182,7 +181,8 @@ void EVENT_USB_Host_HostError(const uint8_t ErrorCode)
 /** Event handler for the USB_DeviceEnumerationFailed event. This indicates that a problem occurred while
  *  enumerating an attached USB device.
  */
-void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode, const uint8_t SubErrorCode)
+void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode,
+                                            const uint8_t SubErrorCode)
 {
 	printf_P(PSTR(ESC_FG_RED "Dev Enum Error\r\n"
 	                         " -- Error Code %d\r\n"

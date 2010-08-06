@@ -49,7 +49,7 @@
 		#include "HIDReport.h"
 
 	/* Macros: */
-		/** Pipe number for the keyboard report data pipe */
+		/** Pipe number for the keyboard report data pipe. */
 		#define KEYBOARD_DATAPIPE         1
 
 		/** LED mask for the library LED driver, to indicate that the USB interface is not ready. */
@@ -71,7 +71,8 @@
 		void EVENT_USB_Host_HostError(const uint8_t ErrorCode);
 		void EVENT_USB_Host_DeviceAttached(void);
 		void EVENT_USB_Host_DeviceUnattached(void);
-		void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode, const uint8_t SubErrorCode);
+		void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode,
+		                                            const uint8_t SubErrorCode);
 		void EVENT_USB_Host_DeviceEnumerationComplete(void);
 
 		void ProcessKeyboardReport(uint8_t* KeyboardReport);

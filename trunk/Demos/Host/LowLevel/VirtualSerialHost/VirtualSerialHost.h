@@ -53,13 +53,13 @@
 		#include "ConfigDescriptor.h"
 		
 	/* Macros: */
-		/** Pipe number for the CDC data IN pipe */
+		/** Pipe number for the CDC data IN pipe. */
 		#define CDC_DATAPIPE_IN           1
 
-		/** Pipe number for the CDC data OUT pipe */
+		/** Pipe number for the CDC data OUT pipe. */
 		#define CDC_DATAPIPE_OUT          2
 
-		/** Pipe number for the CDC notification pipe */
+		/** Pipe number for the CDC notification pipe. */
 		#define CDC_NOTIFICATIONPIPE      3
 
 		/** LED mask for the library LED driver, to indicate that the USB interface is not ready. */
@@ -81,7 +81,8 @@
 		void EVENT_USB_Host_HostError(const uint8_t ErrorCode);
 		void EVENT_USB_Host_DeviceAttached(void);
 		void EVENT_USB_Host_DeviceUnattached(void);
-		void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode, const uint8_t SubErrorCode);
+		void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode,
+		                                            const uint8_t SubErrorCode);
 		void EVENT_USB_Host_DeviceEnumerationComplete(void);
 		
 #endif

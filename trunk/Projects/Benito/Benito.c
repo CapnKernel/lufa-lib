@@ -51,6 +51,9 @@ volatile struct
 /** Previous state of the virtual DTR control line from the host */
 bool PreviousDTRState = false;
 
+/** Milliseconds remaining until the receive buffer is flushed to the USB host */
+uint8_t FlushPeriodRemaining = RECEIVE_BUFFER_FLUSH_MS;
+
 /** LUFA CDC Class driver interface configuration and state information. This structure is
  *  passed to all CDC Class driver functions, so that multiple instances of the same class
  *  within a device can be differentiated from one another.
@@ -82,28 +85,20 @@ int main(void)
 {
 	SetupHardware();
 	
-	Buffer_Initialize(&Tx_Buffer);
+	RingBuffer_InitBuffer(&Tx_Buffer);
 	
 	sei();
 
 	for (;;)
 	{
 		/* Echo bytes from the host to the target via the hardware USART */
-		while (CDC_Device_BytesReceived(&VirtualSerial_CDC_Interface) > 0)
+		int16_t ReceivedByte = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
+		if (!(ReceivedByte < 0) && (UCSR1A & (1 << UDRE1)))
 		{
-			Serial_TxByte(CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface));
+			UDR1 = ReceivedByte;
 
 			LEDs_TurnOnLEDs(LEDMASK_TX);
 			PulseMSRemaining.TxLEDPulse = TX_RX_LED_PULSE_MS;			
-		}
-		
-		/* Echo bytes from the target to the host via the virtual serial port */
-		while (Tx_Buffer.Elements > 0)
-		{
-			CDC_Device_SendByte(&VirtualSerial_CDC_Interface, Buffer_GetElement(&Tx_Buffer));
-
-			LEDs_TurnOnLEDs(LEDMASK_RX);
-			PulseMSRemaining.RxLEDPulse = TX_RX_LED_PULSE_MS;
 		}
 		
 		/* Check if the millisecond timer has elapsed */
@@ -131,6 +126,23 @@ int main(void)
 			if (PulseMSRemaining.RxLEDPulse && !(--PulseMSRemaining.RxLEDPulse))
 			  LEDs_TurnOffLEDs(LEDMASK_RX);
 
+			/* Check if the receive buffer flush period has expired */
+			RingBuff_Count_t BufferCount = RingBuffer_GetCount(&Tx_Buffer);
+			if (!(--FlushPeriodRemaining) || (BufferCount > 200))
+			{
+				/* Echo bytes from the target to the host via the virtual serial port */
+				if (BufferCount)
+				{
+					while (BufferCount--)
+					  CDC_Device_SendByte(&VirtualSerial_CDC_Interface, RingBuffer_Remove(&Tx_Buffer));
+
+					LEDs_TurnOnLEDs(LEDMASK_RX);
+					PulseMSRemaining.RxLEDPulse = TX_RX_LED_PULSE_MS;
+				}
+				
+				FlushPeriodRemaining = RECEIVE_BUFFER_FLUSH_MS;
+			}
+
 			/* Clear the millisecond timer CTC flag (cleared by writing logic one to the register) */
 			TIFR0 |= (1 << OCF0A);		
 		}
@@ -148,7 +160,6 @@ void SetupHardware(void)
 	wdt_disable();
 
 	/* Hardware Initialization */
-	Serial_Init(9600, false);
 	LEDs_Init();
 	USB_Init();
 
@@ -226,10 +237,18 @@ void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCI
 			break;
 	}
 	
-	UCSR1A = (1 << U2X1);
-	UCSR1B = ((1 << RXCIE1) | (1 << TXEN1) | (1 << RXEN1));
-	UCSR1C = ConfigMask;	
+	/* Must turn off USART before reconfiguring it, otherwise incorrect operation may occur */
+	UCSR1B = 0;
+	UCSR1A = 0;
+	UCSR1C = 0;
+
+	/* Set the new baud rate before configuring the USART */
 	UBRR1  = SERIAL_2X_UBBRVAL(CDCInterfaceInfo->State.LineEncoding.BaudRateBPS);
+	
+	/* Reconfigure the USART in double speed mode for a wider baud rate range at the expense of accuracy */
+	UCSR1C = ConfigMask;
+	UCSR1A = (1 << U2X1);	
+	UCSR1B = ((1 << RXCIE1) | (1 << TXEN1) | (1 << RXEN1));
 }
 
 /** ISR to manage the reception of data from the serial port, placing received bytes into a circular buffer
@@ -240,7 +259,7 @@ ISR(USART1_RX_vect, ISR_BLOCK)
 	uint8_t ReceivedByte = UDR1;
 
 	if (USB_DeviceState == DEVICE_STATE_Configured)
-	  Buffer_StoreElement(&Tx_Buffer, ReceivedByte);
+	  RingBuffer_Insert(&Tx_Buffer, ReceivedByte);
 }
 
 /** Event handler for the CDC Class driver Host-to-Device Line Encoding Changed event.

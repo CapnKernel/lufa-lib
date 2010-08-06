@@ -36,12 +36,12 @@
 	/* Includes: */
 		#include <avr/io.h>
 		#include <avr/interrupt.h>
-		#include "SoftUART.h"
+		#include <stdbool.h>
+		
+		#include "../XPLAINBridge.h"
+		#include "LightweightRingBuff.h"
 
 	/* Macros: */
-		#define BAUD       9600
-		#define BIT_TIME   (uint16_t)((F_CPU + (BAUD / 2)) / BAUD)
-
 		#define SRX        PD0
 		#define SRXPIN     PIND
 		#define SRXPORT    PORTD
@@ -50,11 +50,16 @@
 		#define STXPORT    PORTD
 		#define STXDDR     DDRD
 
+	/* Inline Functions: */	
+		static inline void SoftUART_SetBaud(const uint32_t Baud)
+		{
+			uint16_t BitTime = ((F_CPU / Baud) - 1);
+		
+			OCR1A = BitTime;
+			OCR3A = BitTime;
+		}
+
 	/* Function Prototypes: */
-		uint8_t SoftUART_IsReady(void);
-		uint8_t SoftUART_TxByte(uint8_t c);
-		uint8_t SoftUART_IsReceived(void);
-		uint8_t SoftUART_RxByte(void);
-		void    SoftUART_Init(void);
+		void SoftUART_Init(void);
 
 #endif

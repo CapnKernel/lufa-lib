@@ -28,6 +28,15 @@
   this software.
 */
 
+/** \file
+ *
+ *  Bluetooth HCI layer management code. This module manages the overall
+ *  Bluetooth stack connection state to and from other devices, processes
+ *  received events from the Bluetooth controller, and issues commands to
+ *  modify the controller's configuration, such as the broadcast name of the
+ *  device.
+ */
+
 /*
 	TODO: Add local to remote device connections
  */
@@ -35,7 +44,7 @@
 #define  INCLUDE_FROM_BLUETOOTHHCICOMMANDS_C
 #include "BluetoothHCICommands.h"
 
-/** Temporary Bluetooth Device Address, for HCI responses which much include the detination address */
+/** Temporary Bluetooth Device Address, for HCI responses which much include the destination address */
 static uint8_t Bluetooth_TempDeviceAddress[6];
 
 /** Bluetooth HCI processing task. This task should be called repeatedly the main Bluetooth
@@ -156,8 +165,6 @@ void Bluetooth_HCITask(void)
 						Bluetooth_Connection.IsConnected = false;
 						
 						Bluetooth_DisconnectionComplete();
-						
-						Bluetooth_State.CurrentHCIState = Bluetooth_Init;
 						break;
 				}
 			}
@@ -184,7 +191,7 @@ void Bluetooth_HCITask(void)
 				ParameterLength: 0,
 			};
 
-			/* Send the command to reset the bluetooth dongle controller */
+			/* Send the command to reset the Bluetooth dongle controller */
 			Bluetooth_SendHCICommand(&HCICommandHeader, NULL, 0);
 			
 			Bluetooth_State.NextHCIState    = Bluetooth_Init_ReadBufferSize;
@@ -199,7 +206,7 @@ void Bluetooth_HCITask(void)
 				ParameterLength: 0,
 			};
 
-			/* Send the command to read the bluetooth buffer size (mandatory before device sends any data) */
+			/* Send the command to read the Bluetooth buffer size (mandatory before device sends any data) */
 			Bluetooth_SendHCICommand(&HCICommandHeader, NULL, 0);
 
 			Bluetooth_State.NextHCIState    = Bluetooth_Init_GetBDADDR;
@@ -214,7 +221,7 @@ void Bluetooth_HCITask(void)
 				ParameterLength: 0,
 			};
 
-			/* Send the command to retrieve the BDADDR of the inserted bluetooth dongle */
+			/* Send the command to retrieve the BDADDR of the inserted Bluetooth dongle */
 			Bluetooth_SendHCICommand(&HCICommandHeader, NULL, 0);
 
 			Bluetooth_State.NextHCIState    = Bluetooth_Init_SetLocalName;
@@ -229,7 +236,7 @@ void Bluetooth_HCITask(void)
 					ParameterLength: 248,
 				};
 
-			/* Send the command to set the bluetooth dongle's name for other devices to see */
+			/* Send the command to set the Bluetooth dongle's name for other devices to see */
 			Bluetooth_SendHCICommand(&HCICommandHeader, Bluetooth_DeviceConfiguration.Name, strlen(Bluetooth_DeviceConfiguration.Name));
 
 			Bluetooth_State.NextHCIState    = Bluetooth_Init_SetDeviceClass;
@@ -367,7 +374,9 @@ void Bluetooth_HCITask(void)
  *
  *  \return A value from the USB_Host_SendControlErrorCodes_t enum.
  */
-static uint8_t Bluetooth_SendHCICommand(const BT_HCICommand_Header_t* const HCICommandHeader, const void* Parameters, const uint16_t ParameterLength)
+static uint8_t Bluetooth_SendHCICommand(const BT_HCICommand_Header_t* const HCICommandHeader,
+                                        const void* Parameters,
+                                        const uint16_t ParameterLength)
 {
 	/* Need to reserve the amount of bytes given in the header for the complete payload */
 	uint8_t CommandBuffer[sizeof(BT_HCICommand_Header_t) + HCICommandHeader->ParameterLength];

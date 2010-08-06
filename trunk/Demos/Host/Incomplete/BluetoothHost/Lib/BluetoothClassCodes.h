@@ -5,6 +5,7 @@
   dean [at] fourwalledcubicle [dot] com
       www.fourwalledcubicle.com
 */
+
 /*
   Copyright 2010  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
@@ -26,6 +27,12 @@
   arising out of or in connection with the use or performance of
   this software.
 */
+
+/** \file
+ *
+ *  Bluetooth class codes, used to describe the type and overall function of a
+ *  Bluetooth device to other Bluetooth devices.
+ */
 
 #ifndef _BLUETOOTH_CLASS_CODES_H_
 #define _BLUETOOTH_CLASS_CODES_H_
@@ -71,7 +78,7 @@
 		#define DEVICE_CLASS_MINOR_LAN_50_TO_67_PC_UTILIZED    (0x04 << 5)
 		#define DEVICE_CLASS_MINOR_LAN_67_TO_83_PC_UTILIZED    (0x05 << 5)
 		#define DEVICE_CLASS_MINOR_LAN_83_TO_99_PC_UTILIZED    (0x06 << 5)
-		#define DEVICE_CLASS_MINOR_NO_SERVICE_AVAILABLE        (0x07 << 5)
+		#define DEVICE_CLASS_MINOR_LAN_NO_SERVICE_AVAILABLE    (0x07 << 5)
 		
 		#define DEVICE_CLASS_MINOR_AV_UNCATEGORIZED            (0x00 << 2)
 		#define DEVICE_CLASS_MINOR_AV_HEADSET                  (0x01 << 2)

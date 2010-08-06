@@ -36,17 +36,6 @@
 #define  INCLUDE_FROM_BOOTLOADERCDC_C
 #include "BootloaderCDC.h"
 
-/** Line coding options for the virtual serial port. Although the virtual serial port data is never
- *  sent through a physical serial port, the line encoding data must still be read and preserved from
- *  the host, or the host will detect a problem and fail to open the port. This structure contains the
- *  current encoding options, including baud rate, character format, parity mode and total number of 
- *  bits in each data chunk.
- */
-CDC_Line_Coding_t LineCoding = { .BaudRateBPS = 9600,
-                                 .CharFormat  = OneStopBit,
-                                 .ParityType  = Parity_None,
-                                 .DataBits    = 8            };
-
 /** Current address counter. This stores the current address of the FLASH or EEPROM as set by the host,
  *  and is used when reading or writing to the AVRs memory (either FLASH or EEPROM depending on the issued
  *  command.)
@@ -124,63 +113,6 @@ void EVENT_USB_Device_ConfigurationChanged(void)
 	                           ENDPOINT_BANK_SINGLE);
 }
 
-/** Event handler for the USB_UnhandledControlRequest event. This is used to catch standard and class specific
- *  control requests that are not handled internally by the USB library, so that they can be handled appropriately
- *  for the application.
- */
-void EVENT_USB_Device_UnhandledControlRequest(void)
-{
-	uint8_t* LineCodingData = (uint8_t*)&LineCoding;
-
-	/* Process CDC specific control requests */
-	switch (USB_ControlRequest.bRequest)
-	{
-		case REQ_GetLineEncoding:
-			if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
-			{
-				Endpoint_ClearSETUP();
-
-				for (uint8_t i = 0; i < sizeof(LineCoding); i++)
-				  Endpoint_Write_Byte(*(LineCodingData++));	
-				
-				Endpoint_ClearIN();
-				
-				Endpoint_ClearStatusStage();
-			}
-			
-			break;
-		case REQ_SetLineEncoding:
-			if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
-			{
-				Endpoint_ClearSETUP();
-
-				while (!(Endpoint_IsOUTReceived()))
-				{				
-					if (USB_DeviceState == DEVICE_STATE_Unattached)
-					  return;
-				}
-			
-				for (uint8_t i = 0; i < sizeof(LineCoding); i++)
-				  *(LineCodingData++) = Endpoint_Read_Byte();
-
-				Endpoint_ClearOUT();
-
-				Endpoint_ClearStatusStage();
-			}
-	
-			break;
-		case REQ_SetControlLineState:
-			if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
-			{
-				Endpoint_ClearSETUP();
-				
-				Endpoint_ClearStatusStage();
-			}
-	
-			break;
-	}
-}
-
 /** Reads or writes a block of EEPROM or FLASH memory to or from the appropriate CDC data endpoint, depending
  *  on the AVR910 protocol command issued.
  *
@@ -233,7 +165,7 @@ static void ReadWriteMemoryBlock(const uint8_t Command)
 			else
 			{
 				/* Read the next EEPROM byte into the endpoint */
-				WriteNextResponseByte(eeprom_read_byte((uint8_t*)(uint16_t)(CurrAddress >> 1)));
+				WriteNextResponseByte(eeprom_read_byte((uint8_t*)(intptr_t)(CurrAddress >> 1)));
 
 				/* Increment the address counter after use */
 				CurrAddress += 2;
@@ -275,7 +207,7 @@ static void ReadWriteMemoryBlock(const uint8_t Command)
 			else
 			{
 				/* Write the next EEPROM byte from the endpoint */
-				eeprom_write_byte((uint8_t*)(uint16_t)(CurrAddress >> 1), FetchNextCommandByte());					
+				eeprom_write_byte((uint8_t*)((intptr_t)(CurrAddress >> 1)), FetchNextCommandByte());					
 
 				/* Increment the address counter after use */
 				CurrAddress += 2;
@@ -339,7 +271,7 @@ static void WriteNextResponseByte(const uint8_t Response)
 		Endpoint_ClearIN();
 		
 		while (!(Endpoint_IsINReady()))
-		{				
+		{
 			if (USB_DeviceState == DEVICE_STATE_Unattached)
 			  return;
 		}
@@ -367,7 +299,7 @@ void CDC_Task(void)
 		{
 			if (Command == 'E')
 			  RunBootloader = false;
-			if (Command == 'T')
+			else if (Command == 'T')
 			  FetchNextCommandByte();
 
 			/* Send confirmation byte back to the host */
@@ -377,7 +309,6 @@ void CDC_Task(void)
 		{
 			/* Return ATMEGA128 part code - this is only to allow AVRProg to use the bootloader */
 			WriteNextResponseByte(0x44);
-
 			WriteNextResponseByte(0x00);
 		}
 		else if (Command == 'a')
@@ -513,7 +444,7 @@ void CDC_Task(void)
 		else if (Command == 'D')
 		{
 			/* Read the byte from the endpoint and write it to the EEPROM */
-			eeprom_write_byte((uint8_t*)((uint16_t)(CurrAddress >> 1)), FetchNextCommandByte());
+			eeprom_write_byte((uint8_t*)((intptr_t)(CurrAddress >> 1)), FetchNextCommandByte());
 			
 			/* Increment the address after use */			
 			CurrAddress += 2;
@@ -524,7 +455,7 @@ void CDC_Task(void)
 		else if (Command == 'd')
 		{
 			/* Read the EEPROM byte and write it to the endpoint */
-			WriteNextResponseByte(eeprom_read_byte((uint8_t*)((uint16_t)(CurrAddress >> 1))));
+			WriteNextResponseByte(eeprom_read_byte((uint8_t*)((intptr_t)(CurrAddress >> 1))));
 
 			/* Increment the address after use */
 			CurrAddress += 2;

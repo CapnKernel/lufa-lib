@@ -36,8 +36,8 @@
 
 #include "XPLAINBridge.h"
 
-/* Current firmware mode, making the device behave as either a programmer or a USART bridge */
-bool CurrentFirmwareMode = MODE_PDI_PROGRAMMER;
+/** Current firmware mode, making the device behave as either a programmer or a USART bridge */
+bool CurrentFirmwareMode = MODE_USART_BRIDGE;
 
 /** LUFA CDC Class driver interface configuration and state information. This structure is
  *  passed to all CDC Class driver functions, so that multiple instances of the same class
@@ -62,7 +62,7 @@ USB_ClassInfo_CDC_Device_t VirtualSerial_CDC_Interface =
 				.NotificationEndpointDoubleBank = false,
 			},
 	};
-	
+
 /** Circular buffer to hold data from the host before it is sent to the device via the serial port. */
 RingBuff_t USBtoUART_Buffer;
 
@@ -76,9 +76,6 @@ RingBuff_t UARTtoUSB_Buffer;
 int main(void)
 {
 	SetupHardware();
-	
-	Buffer_Initialize(&USBtoUART_Buffer);
-	Buffer_Initialize(&UARTtoUSB_Buffer);
 
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	sei();
@@ -86,7 +83,7 @@ int main(void)
 	for (;;)
 	{
 		if (CurrentFirmwareMode == MODE_USART_BRIDGE)
-		  USARTBridge_Task();
+		  UARTBridge_Task();
 		else
 		  AVRISP_Task();
 
@@ -99,6 +96,8 @@ void AVRISP_Task(void)
 	/* Must be in the configured state for the AVRISP code to process data */
 	if (USB_DeviceState != DEVICE_STATE_Configured)
 	  return;
+
+	V2Params_UpdateParamValues();
 
 	Endpoint_SelectEndpoint(AVRISP_DATA_OUT_EPNUM);
 	
@@ -114,32 +113,27 @@ void AVRISP_Task(void)
 	}
 }
 
-void USARTBridge_Task(void)
+void UARTBridge_Task(void)
 {
 	/* Must be in the configured state for the USART Bridge code to process data */
 	if (USB_DeviceState != DEVICE_STATE_Configured)
 	  return;
 
 	/* Read bytes from the USB OUT endpoint into the UART transmit buffer */
-	for (uint8_t DataBytesRem = CDC_Device_BytesReceived(&VirtualSerial_CDC_Interface); DataBytesRem != 0; DataBytesRem--)
+	int16_t ReceivedByte = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
+	if (!(ReceivedByte < 0) && !(RingBuffer_IsFull(&USBtoUART_Buffer)))
+	  RingBuffer_Insert(&USBtoUART_Buffer, ReceivedByte);
+	
+	/* Check if the UART receive buffer flush timer has expired or buffer is nearly full */
+	RingBuff_Count_t BufferCount = RingBuffer_GetCount(&UARTtoUSB_Buffer);
+	if ((TIFR0 & (1 << TOV0)) || (BufferCount > 200))
 	{
-		if (!(BUFF_STATICSIZE - USBtoUART_Buffer.Elements))
-		  break;
-		  
-		Buffer_StoreElement(&USBtoUART_Buffer, CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface));
+		TIFR0 |= (1 << TOV0);
+
+		/* Read bytes from the UART receive buffer into the USB IN endpoint */
+		while (BufferCount--)
+		  CDC_Device_SendByte(&VirtualSerial_CDC_Interface, RingBuffer_Remove(&UARTtoUSB_Buffer));
 	}
-	
-	/* Read bytes from the UART receive buffer into the USB IN endpoint */
-	if (UARTtoUSB_Buffer.Elements)
-	  CDC_Device_SendByte(&VirtualSerial_CDC_Interface, Buffer_GetElement(&UARTtoUSB_Buffer));
-	
-	/* Load bytes from the UART transmit buffer into the UART */
-	if ((USBtoUART_Buffer.Elements) && SoftUART_IsReady())
-	  SoftUART_TxByte(Buffer_GetElement(&USBtoUART_Buffer));
-	
-	/* Load bytes from the UART into the UART receive buffer */
-	if (SoftUART_IsReceived())
-	  Buffer_StoreElement(&UARTtoUSB_Buffer, SoftUART_RxByte());
 
 	CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
 }
@@ -158,13 +152,12 @@ void SetupHardware(void)
 	SoftUART_Init();
 	LEDs_Init();
 	USB_Init();
-	V2Protocol_Init();
-	
+
 	/* Disable JTAG debugging */
 	MCUCR |= (1 << JTD);
 	MCUCR |= (1 << JTD);
 
-	/* Enable pullup on the JTAG TDI pin so we can use it to select the mode */
+	/* Enable pull-up on the JTAG TDI pin so we can use it to select the mode */
 	PORTF |= (1 << 7);
 	_delay_ms(10);
 
@@ -185,6 +178,16 @@ void EVENT_USB_Device_ConfigurationChanged(void)
 	if (CurrentFirmwareMode == MODE_USART_BRIDGE)
 	{
 		EndpointConfigSuccess &= CDC_Device_ConfigureEndpoints(&VirtualSerial_CDC_Interface);
+
+		/* Configure the UART flush timer - run at Fcpu/1024 for maximum interval before overflow */
+		TCCR0B = ((1 << CS02) | (1 << CS00));
+
+		/* Initialize ring buffers used to hold serial data between USB and software UART interfaces */
+		RingBuffer_InitBuffer(&USBtoUART_Buffer);
+		RingBuffer_InitBuffer(&UARTtoUSB_Buffer);
+		
+		/* Start the software USART */
+		SoftUART_Init();
 	}
 	else
 	{
@@ -197,6 +200,9 @@ void EVENT_USB_Device_ConfigurationChanged(void)
 		                                                    ENDPOINT_DIR_IN, AVRISP_DATA_EPSIZE,
 		                                                    ENDPOINT_BANK_SINGLE);
 		#endif
+	
+		/* Configure the V2 protocol packet handler */
+		V2Protocol_Init();
 	}
 
 	if (EndpointConfigSuccess)
@@ -224,13 +230,31 @@ void EVENT_USB_Device_Disconnect(void)
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 }
 
+/** Event handler for the CDC Class driver Line Encoding Changed event.
+ *
+ *  \param[in] CDCInterfaceInfo  Pointer to the CDC class interface configuration structure being referenced
+ */
+void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCInterfaceInfo)
+{
+	/* Change the software UART's baud rate to match the new baud rate */
+	SoftUART_SetBaud(CDCInterfaceInfo->State.LineEncoding.BaudRateBPS);
+}
+
 /** This function is called by the library when in device mode, and must be overridden (see library "USB Descriptors"
  *  documentation) by the application code so that the address and size of a requested descriptor can be given
  *  to the USB library. When the device receives a Get Descriptor request on the control endpoint, this function
  *  is called so that the descriptor details can be passed back and the appropriate descriptor sent back to the
  *  USB host.
+ *
+ *  \param[in]  wValue  Descriptor type and index to retrieve
+ *  \param[in]  wIndex  Sub-index to retrieve (such as a localized string language)
+ *  \param[out] DescriptorAddress  Address of the retrieved descriptor
+ *
+ *  \return Length of the retrieved descriptor in bytes, or NO_DESCRIPTOR if the descriptor was not found
  */
-uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue, const uint8_t wIndex, void** const DescriptorAddress)
+uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
+                                    const uint8_t wIndex,
+                                    void** const DescriptorAddress)
 {
 	/* Return the correct descriptors based on the selected mode */
 	if (CurrentFirmwareMode == MODE_USART_BRIDGE)

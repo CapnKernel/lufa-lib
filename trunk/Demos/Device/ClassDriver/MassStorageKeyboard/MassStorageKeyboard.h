@@ -75,12 +75,6 @@
 		/** LED mask for the library LED driver, to indicate that the USB interface is busy. */
 		#define LEDMASK_USB_BUSY         LEDS_LED2
 		
-		/** Total number of logical drives within the device - must be non-zero. */
-		#define TOTAL_LUNS               1
-		
-		/** Blocks in each LUN, calculated from the total capacity divided by the total number of Logical Units in the device. */
-		#define LUN_MEDIA_BLOCKS         (VIRTUAL_MEMORY_BLOCKS / TOTAL_LUNS)
-		
 	/* Function Prototypes: */
 		void SetupHardware(void);
 
@@ -92,10 +86,15 @@
 
 		bool CALLBACK_MS_Device_SCSICommandReceived(USB_ClassInfo_MS_Device_t* const MSInterfaceInfo);
 
-		bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo, uint8_t* const ReportID,
-                                                 const uint8_t ReportType, void* ReportData, uint16_t* ReportSize);
-		void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo, const uint8_t ReportID, 
-		                                          const uint8_t ReportType, const void* ReportData, const uint16_t ReportSize);
-
+		bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo,
+		                                         uint8_t* const ReportID,
+		                                         const uint8_t ReportType,
+		                                         void* ReportData,
+		                                         uint16_t* const ReportSize);
+		void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo,
+		                                          const uint8_t ReportID, 
+		                                          const uint8_t ReportType,
+		                                          const void* ReportData,
+		                                          const uint16_t ReportSize);
 
 #endif

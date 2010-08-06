@@ -73,8 +73,8 @@ int main(void)
 {
 	SetupHardware();
 	
-	Buffer_Initialize(&USBtoUSART_Buffer);
-	Buffer_Initialize(&USARTtoUSB_Buffer);
+	RingBuffer_InitBuffer(&USBtoUSART_Buffer);
+	RingBuffer_InitBuffer(&USARTtoUSB_Buffer);
 
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	sei();
@@ -82,21 +82,24 @@ int main(void)
 	for (;;)
 	{
 		/* Read bytes from the USB OUT endpoint into the USART transmit buffer */
-		for (uint8_t DataBytesRem = CDC_Device_BytesReceived(&VirtualSerial_CDC_Interface); DataBytesRem != 0; DataBytesRem--)
+		int16_t ReceivedByte = CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface);
+		if (!(ReceivedByte < 0) && !(RingBuffer_IsFull(&USBtoUSART_Buffer)))
+		  RingBuffer_Insert(&USBtoUSART_Buffer, ReceivedByte);		
+		
+		/* Check if the UART receive buffer flush timer has expired or the buffer is nearly full */
+		RingBuff_Count_t BufferCount = RingBuffer_GetCount(&USARTtoUSB_Buffer);
+		if ((TIFR0 & (1 << TOV0)) || (BufferCount > 200))
 		{
-			if (!(BUFF_STATICSIZE - USBtoUSART_Buffer.Elements))
-			  break;
-			  
-			Buffer_StoreElement(&USBtoUSART_Buffer, CDC_Device_ReceiveByte(&VirtualSerial_CDC_Interface));
+			TIFR0 |= (1 << TOV0);
+
+			/* Read bytes from the USART receive buffer into the USB IN endpoint */
+			while (BufferCount--)
+			  CDC_Device_SendByte(&VirtualSerial_CDC_Interface, RingBuffer_Remove(&USARTtoUSB_Buffer));
 		}
 		
-		/* Read bytes from the USART receive buffer into the USB IN endpoint */
-		while (USARTtoUSB_Buffer.Elements)
-		  CDC_Device_SendByte(&VirtualSerial_CDC_Interface, Buffer_GetElement(&USARTtoUSB_Buffer));
-		
-		/* Load bytes from the USART transmit buffer into the USART */
-		while (USBtoUSART_Buffer.Elements)
-		  Serial_TxByte(Buffer_GetElement(&USBtoUSART_Buffer));
+		/* Load the next byte from the USART transmit buffer into the USART */
+		if (!(RingBuffer_IsEmpty(&USBtoUSART_Buffer)))
+		  Serial_TxByte(RingBuffer_Remove(&USBtoUSART_Buffer));
 		
 		CDC_Device_USBTask(&VirtualSerial_CDC_Interface);
 		USB_USBTask();
@@ -114,9 +117,11 @@ void SetupHardware(void)
 	clock_prescale_set(clock_div_1);
 
 	/* Hardware Initialization */
-	Serial_Init(9600, false);
 	LEDs_Init();
 	USB_Init();
+
+	/* Start the flush timer so that overflows occur rapidly to push received bytes to the USB interface */
+	TCCR0B = (1 << CS02);
 }
 
 /** Event handler for the library USB Connection event. */
@@ -154,7 +159,7 @@ ISR(USART1_RX_vect, ISR_BLOCK)
 	uint8_t ReceivedByte = UDR1;
 
 	if (USB_DeviceState == DEVICE_STATE_Configured)
-	  Buffer_StoreElement(&USARTtoUSB_Buffer, ReceivedByte);
+	  RingBuffer_Insert(&USARTtoUSB_Buffer, ReceivedByte);
 }
 
 /** Event handler for the CDC Class driver Line Encoding Changed event.
@@ -190,9 +195,17 @@ void EVENT_CDC_Device_LineEncodingChanged(USB_ClassInfo_CDC_Device_t* const CDCI
 			ConfigMask |= ((1 << UCSZ11) | (1 << UCSZ10));
 			break;
 	}
+
+	/* Must turn off USART before reconfiguring it, otherwise incorrect operation may occur */
+	UCSR1B = 0;
+	UCSR1A = 0;
+	UCSR1C = 0;
+
+	/* Set the new baud rate before configuring the USART */
+	UBRR1  = SERIAL_2X_UBBRVAL(CDCInterfaceInfo->State.LineEncoding.BaudRateBPS);
 	
+	/* Reconfigure the USART in double speed mode for a wider baud rate range at the expense of accuracy */
+	UCSR1C = ConfigMask;
 	UCSR1A = (1 << U2X1);	
 	UCSR1B = ((1 << RXCIE1) | (1 << TXEN1) | (1 << RXEN1));
-	UCSR1C = ConfigMask;	
-	UBRR1  = SERIAL_2X_UBBRVAL(CDCInterfaceInfo->State.LineEncoding.BaudRateBPS);
 }

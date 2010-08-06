@@ -62,10 +62,10 @@
 		                                                   SenseData.AdditionalSenseCode = (acode); \
 		                                                   SenseData.AdditionalSenseQualifier = (aqual); }MACROE
 
-		/** Macro for the SCSI_Command_ReadWrite_10() function, to indicate that data is to be read from the storage medium. */
+		/** Macro for the \ref SCSI_Command_ReadWrite_10() function, to indicate that data is to be read from the storage medium. */
 		#define DATA_READ           true
 
-		/** Macro for the SCSI_Command_ReadWrite_10() function, to indicate that data is to be written to the storage medium. */
+		/** Macro for the \ref SCSI_Command_ReadWrite_10() function, to indicate that data is to be written to the storage medium. */
 		#define DATA_WRITE          false
 
 		/** Value for the DeviceType entry in the SCSI_Inquiry_Response_t enum, indicating a Block Media device. */
@@ -83,23 +83,23 @@
 			unsigned char DeviceType          : 5;
 			unsigned char PeripheralQualifier : 3;
 			
-			unsigned char _RESERVED1          : 7;
+			unsigned char Reserved            : 7;
 			unsigned char Removable           : 1;
 			
 			uint8_t       Version;
 			
 			unsigned char ResponseDataFormat  : 4;
-			unsigned char _RESERVED2          : 1;
+			unsigned char Reserved2           : 1;
 			unsigned char NormACA             : 1;
 			unsigned char TrmTsk              : 1;
 			unsigned char AERC                : 1;
 
 			uint8_t       AdditionalLength;
-			uint8_t       _RESERVED3[2];
+			uint8_t       Reserved3[2];
 
 			unsigned char SoftReset           : 1;
 			unsigned char CmdQue              : 1;
-			unsigned char _RESERVED4          : 1;
+			unsigned char Reserved4           : 1;
 			unsigned char Linked              : 1;
 			unsigned char Sync                : 1;
 			unsigned char WideBus16Bit        : 1;
@@ -121,7 +121,7 @@
 			uint8_t       SegmentNumber;
 			
 			unsigned char SenseKey            : 4;
-			unsigned char _RESERVED1          : 1;
+			unsigned char Reserved            : 1;
 			unsigned char ILI                 : 1;
 			unsigned char EOM                 : 1;
 			unsigned char FileMark            : 1;

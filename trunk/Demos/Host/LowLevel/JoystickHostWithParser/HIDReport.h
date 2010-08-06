@@ -43,23 +43,23 @@
 		#include "JoystickHostWithParser.h"
 
 	/* Macros: */
-		/** HID Report Descriptor Usage for a Joystick */
+		/** HID Report Descriptor Usage for a Joystick. */
 		#define USAGE_JOYSTICK              0x04
 
-		/** HID Report Descriptor Usage Page value for a toggle button */
+		/** HID Report Descriptor Usage Page value for a toggle button. */
 		#define USAGE_PAGE_BUTTON           0x09
 
-		/** HID Report Descriptor Usage Page value for a Generic Desktop Control */
+		/** HID Report Descriptor Usage Page value for a Generic Desktop Control. */
 		#define USAGE_PAGE_GENERIC_DCTRL    0x01
 
-		/** HID Report Descriptor Usage value for a X axis movement */
+		/** HID Report Descriptor Usage value for a X axis movement. */
 		#define USAGE_X                     0x30
 
-		/** HID Report Descriptor Usage value for a Y axis movement */
+		/** HID Report Descriptor Usage value for a Y axis movement. */
 		#define USAGE_Y                     0x31
 
 	/* Enums: */
-		/** Enum for the possible return codes of the GetHIDReportData() function. */
+		/** Enum for the possible return codes of the \ref GetHIDReportData() function. */
 		enum JoystickHostWithParser_GetHIDReportDataCodes_t
 		{
 			ParseSuccessful         = 0, /**< HID report descriptor parsed successfully */
@@ -89,6 +89,6 @@
 	/* Function Prototypes: */
 		uint8_t GetHIDReportData(void);
 		
-		bool CALLBACK_HIDParser_FilterHIDReportItem(HID_ReportItem_t* CurrentItem);
+		bool CALLBACK_HIDParser_FilterHIDReportItem(HID_ReportItem_t* const CurrentItem);
 		
 #endif

@@ -44,11 +44,10 @@
 		#include <avr/interrupt.h>
 		#include <stdio.h>
 
-		#include "Lib/ServiceDiscoveryProtocol.h"
-		#include "Lib/BluetoothStack.h"
-
+		#include "BluetoothEvents.h"
 		#include "DeviceDescriptor.h"
 		#include "ConfigDescriptor.h"
+		#include "Lib/BluetoothStack.h"
 
 		#include <LUFA/Version.h>
 		#include <LUFA/Drivers/Misc/TerminalCodes.h>
@@ -69,6 +68,9 @@
 		/** LED mask for the library LED driver, to indicate that an error has occurred in the USB interface. */
 		#define LEDMASK_USB_ERROR        (LEDS_LED1 | LEDS_LED3)
 
+		/** LED mask for the library LED driver, to indicate that the USB interface is busy. */
+		#define LEDMASK_USB_BUSY          LEDS_LED2
+
 	/* Task Definitions: */
 		void Bluetooth_Host_Task(void);
 		
@@ -77,7 +79,8 @@
 		void EVENT_USB_Host_DeviceUnattached(void);
 		void EVENT_USB_Host_DeviceEnumerationComplete(void);
 		void EVENT_USB_Host_HostError(const uint8_t ErrorCode);
-		void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode, const uint8_t SubErrorCode);
+		void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode,
+		                                            const uint8_t SubErrorCode);
 
 	/* Function Prototypes: */
 		void SetupHardware(void);

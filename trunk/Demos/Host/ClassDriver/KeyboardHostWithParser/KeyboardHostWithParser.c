@@ -143,7 +143,7 @@ int main(void)
 							/* Key code is an unsigned char in length, cast to the appropriate type */
 							uint8_t KeyCode = (uint8_t)ReportItem->Value;
 
-							/* If scancode is non-zero, a key is being pressed */
+							/* If scan-code is non-zero, a key is being pressed */
 							if (KeyCode)
 							{
 								/* Toggle status LED to indicate keypress */
@@ -151,7 +151,7 @@ int main(void)
 
 								char PressedKey = 0;
 
-								/* Convert scancode to printable character if alphanumeric */
+								/* Convert scan-code to printable character if alphanumeric */
 								if ((KeyCode >= 0x04) && (KeyCode <= 0x1D))
 								  PressedKey = (KeyCode - 0x04) + 'A';
 								else if ((KeyCode >= 0x1E) && (KeyCode <= 0x27))
@@ -166,7 +166,7 @@ int main(void)
 								  putchar(PressedKey);
 							}
 							
-							/* Once a scancode is found, stop scanning through the report items */
+							/* Once a scan-code is found, stop scanning through the report items */
 							break;
 						}
 					}
@@ -237,7 +237,8 @@ void EVENT_USB_Host_HostError(const uint8_t ErrorCode)
 /** Event handler for the USB_DeviceEnumerationFailed event. This indicates that a problem occurred while
  *  enumerating an attached USB device.
  */
-void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode, const uint8_t SubErrorCode)
+void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode,
+                                            const uint8_t SubErrorCode)
 {
 	printf_P(PSTR(ESC_FG_RED "Dev Enum Error\r\n"
 	                         " -- Error Code %d\r\n"
@@ -256,7 +257,7 @@ void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode, const uint8
  *
  *  \return Boolean true if the item should be stored into the HID report structure, false if it should be discarded
  */
-bool CALLBACK_HIDParser_FilterHIDReportItem(HID_ReportItem_t* CurrentItem)
+bool CALLBACK_HIDParser_FilterHIDReportItem(HID_ReportItem_t* const CurrentItem)
 {
 	/* Check the attributes of the current item - see if we are interested in it or not;
 	 * only store KEYBOARD usage page items into the Processed HID Report structure to

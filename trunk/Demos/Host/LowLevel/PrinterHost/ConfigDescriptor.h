@@ -38,17 +38,17 @@
 		#include "Lib/PrinterCommands.h"
 		
 	/* Macros: */
-		/** Interface Class value for the Printer Device class */
+		/** Interface Class value for the Printer Device class. */
 		#define PRINTER_CLASS                    0x07
 
-		/** Interface Subclass value for the Printer Device class */
+		/** Interface Subclass value for the Printer Device class. */
 		#define PRINTER_SUBCLASS                 0x01
 
-		/** Interface Protocol value for a Bidirectional communication encapsulation */
+		/** Interface Protocol value for a Bidirectional communication encapsulation. */
 		#define PRINTER_PROTOCOL                 0x02
 
 	/* Enums: */
-		/** Enum for the possible return codes of the ProcessConfigurationDescriptor() function. */
+		/** Enum for the possible return codes of the \ref ProcessConfigurationDescriptor() function. */
 		enum PrinterHost_GetConfigDescriptorDataCodes_t
 		{
 			SuccessfulConfigRead            = 0, /**< Configuration Descriptor was processed successfully */

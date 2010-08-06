@@ -53,10 +53,10 @@
 		#include "ConfigDescriptor.h"
 		
 	/* Macros: */
-		/** Pipe number for the HID data IN pipe */
+		/** Pipe number for the HID data IN pipe. */
 		#define HID_DATA_IN_PIPE          1
 		
-		/** Pipe number for the HID data OUT pipe */
+		/** Pipe number for the HID data OUT pipe. */
 		#define HID_DATA_OUT_PIPE         2
 
 		/** HID Class specific request to send a HID report to the device. */
@@ -90,10 +90,14 @@
 		void EVENT_USB_Host_HostError(const uint8_t ErrorCode);
 		void EVENT_USB_Host_DeviceAttached(void);
 		void EVENT_USB_Host_DeviceUnattached(void);
-		void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode, const uint8_t SubErrorCode);
+		void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode,
+		                                            const uint8_t SubErrorCode);
 		void EVENT_USB_Host_DeviceEnumerationComplete(void);
 
 		void ReadNextReport(void);
-		void WriteNextReport(uint8_t* ReportOUTData, uint8_t ReportIndex, uint8_t ReportType, uint16_t ReportLength);
+		void WriteNextReport(uint8_t* ReportOUTData,
+		                     const uint8_t ReportIndex,
+		                     const uint8_t ReportType,
+		                     uint16_t ReportLength);
 		
 #endif

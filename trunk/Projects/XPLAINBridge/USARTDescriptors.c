@@ -93,7 +93,7 @@ USART_USB_Descriptor_Configuration_t PROGMEM USART_ConfigurationDescriptor =
 			.ConfigurationNumber    = 1,
 			.ConfigurationStrIndex  = NO_DESCRIPTOR,
 				
-			.ConfigAttributes       = (USB_CONFIG_ATTR_BUSPOWERED | USB_CONFIG_ATTR_SELFPOWERED),
+			.ConfigAttributes       = USB_CONFIG_ATTR_BUSPOWERED,
 			
 			.MaxPowerConsumption    = USB_CONFIG_POWER_MA(100)
 		},
@@ -130,7 +130,7 @@ USART_USB_Descriptor_Configuration_t PROGMEM USART_ConfigurationDescriptor =
 			.Data                   = {0x06}
 		},
 		
-	.CDC_Functional_Union= 
+	.CDC_Functional_Union = 
 		{
 			.Header                 = {.Size = sizeof(CDC_FUNCTIONAL_DESCRIPTOR(2)), .Type = 0x24},
 			.SubType                = 0x06,
@@ -218,10 +218,12 @@ USB_Descriptor_String_t PROGMEM USART_ProductString =
 	.UnicodeString          = L"LUFA XPLAIN Bridge"
 };
 
-/** Descriptior retrieval function for the USART Bridge descriptors. This function is in turn called by the GetDescriptor
+/** Descriptor retrieval function for the USART Bridge descriptors. This function is in turn called by the GetDescriptor
  *  callback function in the main source file, to retrieve the device's descriptors when in USART bridge mode.
  */
-uint16_t USART_GetDescriptor(const uint16_t wValue, const uint8_t wIndex, void** const DescriptorAddress)
+uint16_t USART_GetDescriptor(const uint16_t wValue,
+                             const uint8_t wIndex,
+                             void** const DescriptorAddress)
 {
 	const uint8_t  DescriptorType   = (wValue >> 8);
 	const uint8_t  DescriptorNumber = (wValue & 0xFF);

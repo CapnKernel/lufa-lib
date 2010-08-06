@@ -28,6 +28,11 @@
   this software.
 */
 
+/** \file
+ *
+ *  Header file for BluetoothStack.c.
+ */
+
 #ifndef _BLUETOOTH_STACK_
 #define _BLUETOOTH_STACK_
 
@@ -58,44 +63,47 @@
 		#define MAXIMUM_CHANNEL_MTU            255
 		
 	/* Enums: */
-		/** Enum for the possible states for a bluetooth ACL channel. */
+		/** Enum for the possible states for a Bluetooth ACL channel. */
 		enum BT_ChannelStates_t
 		{
-			Channel_Closed                = 0, /**< Channel is closed and inactive. No data may be sent or received. */
-			Channel_WaitConnect           = 1, /**< A connection request has been received, but a response has not been sent. */
-			Channel_WaitConnectRsp        = 2, /**< A connection request has been sent, but a response has not been received. */
-			Channel_Config_WaitConfig     = 3, /**< Channel has been connected, but not yet configured on either end. */
-			Channel_Config_WaitSendConfig = 4, /**< Channel configuration has been received and accepted, but not yet sent. */
-			Channel_Config_WaitReqResp    = 5, /**< Channel configuration has been sent but not responded to, and a configuration
-			                                        request from the remote end has not yet been received. */
-			Channel_Config_WaitResp       = 6, /**< Channel configuration has been sent but not accepted, but a configuration request
-			                                        from the remote end has been accepted. */
-			Channel_Config_WaitReq        = 7, /**< Channel configuration has been sent and accepted, but a configuration request
-			                                        from the remote end has not yet been accepted. */
-			Channel_Open                  = 8, /**< Channel is open and ready to send or receive data */
-			Channel_WaitDisconnect        = 9, /**< A disconnection request has been sent, but not yet acknowledged. */
+			BT_Channel_Closed                = 0, /**< Channel is closed and inactive. No data may be sent or received. */
+			BT_Channel_WaitConnect           = 1, /**< A connection request has been received, but a response has not been sent. */
+			BT_Channel_WaitConnectRsp        = 2, /**< A connection request has been sent, but a response has not been received. */
+			BT_Channel_Config_WaitConfig     = 3, /**< Channel has been connected, but not yet configured on either end. */
+			BT_Channel_Config_WaitSendConfig = 4, /**< Channel configuration has been received and accepted, but not yet sent. */
+			BT_Channel_Config_WaitReqResp    = 5, /**< Channel configuration has been sent but not responded to, and a configuration
+			                                       *   request from the remote end has not yet been received.
+			                                       */
+			BT_Channel_Config_WaitResp       = 6, /**< Channel configuration has been sent but not accepted, but a configuration request
+			                                       *   from the remote end has been accepted.
+			                                       */
+			BT_Channel_Config_WaitReq        = 7, /**< Channel configuration has been sent and accepted, but a configuration request
+			                                       *   from the remote end has not yet been accepted.
+			                                       */
+			BT_Channel_Open                  = 8, /**< Channel is open and ready to send or receive data */
+			BT_Channel_WaitDisconnect        = 9, /**< A disconnection request has been sent, but not yet acknowledged. */
 		};
 
 		/** Enum for the possible error codes returned by the \ref Bluetooth_SendPacket() function. */
 		enum BT_SendPacket_ErrorCodes_t
 		{
-			BT_SENDPACKET_NoError            = 0, /**< The packet was sent sucessfully. */
-			BT_SENDPACKET_NotConnected       = 1, /**< The bluetooth stack is not currently connected to a remote device. */
+			BT_SENDPACKET_NoError            = 0, /**< The packet was sent successfully. */
+			BT_SENDPACKET_NotConnected       = 1, /**< The Bluetooth stack is not currently connected to a remote device. */
 			BT_SENDPACKET_ChannelNotOpen     = 2, /**< The given channel is not currently in the Open state. */
 		};
 
 	/* Type Defines: */
-		/** Type define for a Bluetooth ACL channel information structure. This structure contains all the relevent
+		/** Type define for a Bluetooth ACL channel information structure. This structure contains all the relevant
 		 *  information on an ACL channel for data transmission and reception by the stack.
 		 */
 		typedef struct
 		{
-			uint8_t  State;
-			uint16_t LocalNumber;
-			uint16_t RemoteNumber;
-			uint16_t PSM;
-			uint16_t LocalMTU;
-			uint16_t RemoteMTU;
+			uint8_t  State; /**< Current channel state, a value from the \ref BT_ChannelStates_t enum. */
+			uint16_t LocalNumber; /**< Local channel number on the device. */
+			uint16_t RemoteNumber; /**< Remote channel number on the connected device. */
+			uint16_t PSM; /**< Protocol used on the channel. */
+			uint16_t LocalMTU; /**< MTU of data sent from the connected device to the local device. */
+			uint16_t RemoteMTU; /**< MTU of data sent from the local device to the connected device. */
 		} Bluetooth_Channel_t;
 
 		/** Type define for a Bluetooth device connection information structure. This structure contains all the
@@ -109,7 +117,7 @@
 			uint16_t            ConnectionHandle; /**< Connection handle to the remote device, used internally in the stack. */
 			uint8_t             RemoteAddress[6]; /**< Bluetooth device address of the attached remote device. */
 			Bluetooth_Channel_t Channels[BLUETOOTH_MAX_OPEN_CHANNELS]; /**< Channel information structures for the connection. */
-			uint8_t             SignallingIdentifier; /**< Next Signalling Channel unique command sequence identifier. */
+			uint8_t             SignalingIdentifier; /**< Next Signaling Channel unique command sequence identifier. */
 		} Bluetooth_Connection_t;
 		
 		/** Local Bluetooth device information structure, for the defining of local device characteristics for the Bluetooth stack. */
@@ -117,7 +125,7 @@
 		{
 			uint32_t Class; /**< Class of the local device, a mask of DEVICE_CLASS_* masks. */
 			char     PINCode[16]; /**< Pin code required to send or receive in order to authenticate with a remote device. */
-			char     Name[]; /**< Name of the local bluetooth device, up to 248 characters. */
+			char     Name[]; /**< Name of the local Bluetooth device, up to 248 characters. */
 		} Bluetooth_Device_t;
 		
 		/** Bluetooth stack state information structure, for the containment of the Bluetooth stack state. The values in
@@ -131,7 +139,7 @@
 			bool    IsInitialized; /**< Indicates if the Bluetooth stack is currently initialized and ready for connections
 			                        *   to or from a remote Bluetooth device.
 			                        */
-			uint8_t LocalBDADDR[6]; /**< Local bluetooth adapter's BDADDR, valid when the stack is fully initialized. */
+			uint8_t LocalBDADDR[6]; /**< Local Bluetooth adapter's BDADDR, valid when the stack is fully initialized. */
 		} Bluetooth_Stack_State_t;
 	
 	/* Includes: */
@@ -147,11 +155,17 @@
 		void                 Bluetooth_ConnectionComplete(void);
 		void                 Bluetooth_DisconnectionComplete(void);
 		bool                 Bluetooth_ChannelConnectionRequest(const uint16_t PSM);
-		void                 Bluetooth_PacketReceived(void* Data, uint16_t DataLen, Bluetooth_Channel_t* const Channel);
-		Bluetooth_Channel_t* Bluetooth_GetChannelData(const uint16_t SearchValue, const uint8_t SearchKey);
+		void                 Bluetooth_PacketReceived(void* Data, uint16_t DataLen,
+		                                              Bluetooth_Channel_t* const ACLChannel);
+		void                 Bluetooth_ChannelOpened(Bluetooth_Channel_t* const ACLChannel);
+
+		Bluetooth_Channel_t* Bluetooth_GetChannelData(const uint16_t SearchValue,
+		                                              const uint8_t SearchKey);
 		Bluetooth_Channel_t* Bluetooth_OpenChannel(const uint16_t PSM);
-		void                 Bluetooth_CloseChannel(Bluetooth_Channel_t* const Channel);
-		uint8_t              Bluetooth_SendPacket(void* Data, uint16_t DataLen, Bluetooth_Channel_t* const Channel);
+		void                 Bluetooth_CloseChannel(Bluetooth_Channel_t* const ACLChannel);
+		uint8_t              Bluetooth_SendPacket(void* Data,
+		                                          uint16_t DataLen,
+		                                          Bluetooth_Channel_t* const ACLChannel);
 
 	/* External Variables: */
 		extern Bluetooth_Device_t      Bluetooth_DeviceConfiguration;

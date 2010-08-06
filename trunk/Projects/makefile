@@ -32,8 +32,8 @@ all:
 	$(MAKE) -C RelayBoard clean
 	$(MAKE) -C RelayBoard all
 
-	$(MAKE) -C TemperatureDataLogger clean
-	$(MAKE) -C TemperatureDataLogger all
+	$(MAKE) -C TempDataLogger clean
+	$(MAKE) -C TempDataLogger all
 
 	$(MAKE) -C USBtoSerial clean
 	$(MAKE) -C USBtoSerial all
@@ -51,7 +51,7 @@ all:
 	$(MAKE) -C Magstripe $@
 	$(MAKE) -C MissileLauncher $@
 	$(MAKE) -C RelayBoard $@
-	$(MAKE) -C TemperatureDataLogger $@
+	$(MAKE) -C TempDataLogger $@
 	$(MAKE) -C USBtoSerial $@
 	$(MAKE) -C Webserver $@
 	$(MAKE) -C XPLAINBridge $@

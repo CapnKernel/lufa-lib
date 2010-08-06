@@ -53,7 +53,7 @@
  * statement. While it would be possible to break the uip_process()
  * function into many smaller functions, this would increase the code
  * size because of the overhead of parameter passing and the fact that
- * the optimier would not be as efficient.
+ * the optimiser would not be as efficient.
  *
  * The principle is that we have a small buffer, called the uip_buf,
  * in which the device driver puts an incoming packet. The TCP/IP
@@ -158,7 +158,7 @@ struct uip_conn uip_conns[UIP_CONNS];
 				connections. */
 u16_t uip_listenports[UIP_LISTENPORTS];
                              /* The uip_listenports list all currently
-				listning ports. */
+				listening ports. */
 #if UIP_UDP
 struct uip_udp_conn *uip_udp_conn;
 struct uip_udp_conn uip_udp_conns[UIP_UDP_CONNS];
@@ -598,7 +598,7 @@ uip_reass(void)
 	     ~bitmap_bits[((offset + len) / 8 ) & 7];
     } else {
       /* If the two endpoints are in different bytes, we update the
-	 bytes in the endpoints and fill the stuff inbetween with
+	 bytes in the endpoints and fill the stuff in-between with
 	 0xff. */
       uip_reassbitmap[offset / (8 * 8)] |=
 	bitmap_bits[(offset / 8 ) & 7];
@@ -696,7 +696,7 @@ uip_process(u8_t flag)
     }
     goto drop;
     
-    /* Check if we were invoked because of the perodic timer fireing. */
+    /* Check if we were invoked because of the periodic timer firing. */
   } else if(flag == UIP_TIMER) {
 #if UIP_REASSEMBLY
     if(uip_reasstmr != 0) {
@@ -749,7 +749,7 @@ uip_process(u8_t flag)
 	    goto tcp_send_nodata;
 	  }
 
-	  /* Exponential backoff. */
+	  /* Exponential back-off. */
 	  uip_connr->timer = UIP_RTO << (uip_connr->nrtx > 4?
 					 4:
 					 uip_connr->nrtx);
@@ -980,7 +980,7 @@ uip_process(u8_t flag)
 
   /* If we are configured to use ping IP address assignment, we use
      the destination IP address of this ping packet and assign it to
-     ourself. */
+     yourself. */
 #if UIP_PINGADDRCONF
   if(uip_ipaddr_cmp(&uip_hostaddr, &uip_all_zeroes_addr)) {
     uip_hostaddr = BUF->destipaddr;
@@ -1030,7 +1030,7 @@ uip_process(u8_t flag)
       }
       
       /* We should now send a neighbor advertisement back to where the
-	 neighbor solicication came from. */
+	 neighbor solicitation came from. */
       ICMPBUF->type = ICMP6_NEIGHBOR_ADVERTISEMENT;
       ICMPBUF->flags = ICMP6_FLAG_S; /* Solicited flag. */
       
@@ -1297,7 +1297,7 @@ uip_process(u8_t flag)
      with a connection in LISTEN. In that case, we should create a new
      connection and send a SYNACK in return. */
  found_listen:
-  /* First we check if there are any connections avaliable. Unused
+  /* First we check if there are any connections available. Unused
      connections are kept in the same table as used connections, but
      unused ones have the tcpstate set to CLOSED. Also, connections in
      TIME_WAIT are kept track of and we'll use the oldest one if no
@@ -1411,7 +1411,7 @@ uip_process(u8_t flag)
   uip_flags = 0;
   /* We do a very naive form of TCP reset processing; we just accept
      any RST and kill our connection. We should in fact check if the
-     sequence number of this reset is wihtin our advertised window
+     sequence number of this reset is within our advertised window
      before we accept the reset. */
   if(BUF->flags & TCP_RST) {
     uip_connr->tcpstateflags = UIP_CLOSED;
@@ -1642,7 +1642,7 @@ uip_process(u8_t flag)
        the initial MSS so that the application will send an entire MSS
        of data. This data will not be acknowledged by the receiver,
        and the application will retransmit it. This is called the
-       "persistent timer" and uses the retransmission mechanim.
+       "persistent timer" and uses the retransmission mechanism.
     */
     tmp16 = ((u16_t)BUF->wnd[0] << 8) + (u16_t)BUF->wnd[1];
     if(tmp16 > uip_connr->initialmss ||

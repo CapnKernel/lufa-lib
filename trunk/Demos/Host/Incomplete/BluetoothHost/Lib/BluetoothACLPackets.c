@@ -28,10 +28,16 @@
   this software.
 */
 
+/** \file
+ *
+ *  Bluetooth L2CAP layer management code. This module managed the creation,
+ *  configuration and teardown of L2CAP channels, and manages packet reception
+ *  and sending to and from other Bluetooth devices.
+ */
+
 /*
 	TODO: Make SendPacket respect receiver's MTU
 	TODO: Make ReceivePacket stitch together MTU fragments (?)
-	TODO: Add channel opened/closed callbacks
  */
 
 #define  INCLUDE_FROM_BLUETOOTH_ACLPACKETS_C
@@ -42,8 +48,8 @@
  */
 void Bluetooth_ACLTask(void)
 {
-	/* Process incomming ACL packets, if any */
-	Bluetooth_ProcessIncommingACLPackets();
+	/* Process incoming ACL packets, if any */
+	Bluetooth_ProcessIncomingACLPackets();
 	
 	/* Check for any half-open channels, send configuration details to the remote device if found */
 	for (uint8_t i = 0; i < BLUETOOTH_MAX_OPEN_CHANNELS; i++)
@@ -55,11 +61,11 @@ void Bluetooth_ACLTask(void)
 		/* Check if we are in a channel state which requires a configuration request to be sent */
 		switch (ChannelData->State)
 		{
-			case Channel_Config_WaitConfig:
-				ChannelData->State = Channel_Config_WaitReqResp;
+			case BT_Channel_Config_WaitConfig:
+				ChannelData->State = BT_Channel_Config_WaitReqResp;
 				break;
-			case Channel_Config_WaitSendConfig:
-				ChannelData->State = Channel_Config_WaitResp;
+			case BT_Channel_Config_WaitSendConfig:
+				ChannelData->State = BT_Channel_Config_WaitResp;
 				break;
 			default:
 				MustSendConfigReq  = false;
@@ -83,7 +89,7 @@ void Bluetooth_ACLTask(void)
 			
 			/* Fill out the Signal Command header in the response packet */
 			PacketData.SignalCommandHeader.Code            = BT_SIGNAL_CONFIGURATION_REQUEST;
-			PacketData.SignalCommandHeader.Identifier      = ++Bluetooth_Connection.SignallingIdentifier;
+			PacketData.SignalCommandHeader.Identifier      = ++Bluetooth_Connection.SignalingIdentifier;
 			PacketData.SignalCommandHeader.Length          = sizeof(PacketData.ConfigurationRequest) +
 			                                                 sizeof(PacketData.Option_LocalMTU);
 
@@ -102,11 +108,11 @@ void Bluetooth_ACLTask(void)
 	}
 }
 
-/** Incomming ACL packet processing task. This task is called by the main ACL processing task to read in and process
- *  any incomming ACL packets to the device, handling signal requests as they are received or passing along channel
+/** Incoming ACL packet processing task. This task is called by the main ACL processing task to read in and process
+ *  any incoming ACL packets to the device, handling signal requests as they are received or passing along channel
  *  data to the user application.
  */
-static void Bluetooth_ProcessIncommingACLPackets(void)
+static void Bluetooth_ProcessIncomingACLPackets(void)
 {
 	BT_ACL_Header_t        ACLPacketHeader;
 	BT_DataPacket_Header_t DataHeader;
@@ -131,10 +137,10 @@ static void Bluetooth_ProcessIncommingACLPackets(void)
 	BT_ACL_DEBUG(2, "-- Destination Channel: 0x%04X", DataHeader.DestinationChannel);
 	BT_ACL_DEBUG(2, "-- Payload Length: 0x%04X", DataHeader.PayloadLength);
 
-	/* Check the packet's destination channel - signalling channel should be processed by the stack internally */
+	/* Check the packet's destination channel - signaling channel should be processed by the stack internally */
 	if (DataHeader.DestinationChannel == BT_CHANNEL_SIGNALING)
 	{
-		/* Read in the Signal Command header of the incomming packet */
+		/* Read in the Signal Command header of the incoming packet */
 		BT_Signal_Header_t SignalCommandHeader;
 		Pipe_Read_Stream_LE(&SignalCommandHeader, sizeof(SignalCommandHeader));
 		
@@ -187,27 +193,70 @@ static void Bluetooth_ProcessIncommingACLPackets(void)
 	}
 	else
 	{
-		/* Non-signalling packet received, read in the packet contents and pass to the user application */
+		/* Non-signaling packet received, read in the packet contents and pass to the user application */
 		uint8_t PacketData[DataHeader.PayloadLength];
 		Pipe_Read_Stream_LE(PacketData, DataHeader.PayloadLength);
 		Pipe_ClearIN();
 		Pipe_Freeze();
-
+	
 		Bluetooth_PacketReceived(PacketData, DataHeader.PayloadLength,
 		                         Bluetooth_GetChannelData(DataHeader.DestinationChannel, CHANNEL_SEARCH_LOCALNUMBER));
 	}
 }
 
+/** Retrieves the channel information structure with the given local or remote channel number from the channel list.
+ *
+ *  \param[in] SearchValue  Value to search for in the channel structure list
+ *  \param[in] SearchKey    Key to search within the channel structure, a CHANNEL_SEARCH_* mask
+ *
+ *  \return Pointer to the matching channel information structure in the channel table if found, NULL otherwise
+ */
+Bluetooth_Channel_t* Bluetooth_GetChannelData(const uint16_t SearchValue,
+                                              const uint8_t SearchKey)
+{
+	for (uint8_t i = 0; i < BLUETOOTH_MAX_OPEN_CHANNELS; i++)
+	{
+		Bluetooth_Channel_t* ChannelData = &Bluetooth_Connection.Channels[i];
+
+		/* Closed channels should be ignored as they are not considered valid data */
+		if (ChannelData->State == BT_Channel_Closed)
+		  continue;
+	
+		bool FoundMatch = false;
+		
+		/* Search the current channel for the search key to see if it matches */
+		switch (SearchKey)
+		{
+			case CHANNEL_SEARCH_LOCALNUMBER:
+				FoundMatch = (SearchValue == ChannelData->LocalNumber);
+				break;
+			case CHANNEL_SEARCH_REMOTENUMBER:
+				FoundMatch = (SearchValue == ChannelData->RemoteNumber);
+				break;
+			case CHANNEL_SEARCH_PSM:
+				FoundMatch = (SearchValue == ChannelData->PSM);
+				break;
+		}
+	
+		if (FoundMatch)
+		  return ChannelData;
+	}
+
+	return NULL;
+}
+
 /** Sends a packet to the remote device on the specified channel.
  *
- * \param[in] Data     Pointer to a buffer where the data is to be sourced from
- * \param[in] DataLen  Length of the data to send
- * \param[in] Channel  Channel information structure containing the destination channel's information, NULL to send
- *                     to the remote device's signalling channel
+ * \param[in] Data        Pointer to a buffer where the data is to be sourced from
+ * \param[in] DataLen     Length of the data to send
+ * \param[in] ACLChannel  ACL channel information structure containing the destination channel's information, NULL
+ *                        to send to the remote device's signaling channel
  *
  * \return A value from the \ref BT_SendPacket_ErrorCodes_t enum
  */
-uint8_t Bluetooth_SendPacket(void* Data, const uint16_t DataLen, Bluetooth_Channel_t* const Channel)
+uint8_t Bluetooth_SendPacket(void* Data,
+                             const uint16_t DataLen,
+                             Bluetooth_Channel_t* const ACLChannel)
 {
 	BT_ACL_Header_t        ACLPacketHeader;
 	BT_DataPacket_Header_t DataHeader;
@@ -216,19 +265,21 @@ uint8_t Bluetooth_SendPacket(void* Data, const uint16_t DataLen, Bluetooth_Chann
 	if (!(Bluetooth_Connection.IsConnected))
 	  return BT_SENDPACKET_NotConnected;
 
-	/* If the destination channel is not the signalling channel and it is not currently fully open, abort */
-	if ((Channel != NULL) && (Channel->State != Channel_Open))
+	/* If the destination channel is not the signaling channel and it is not currently fully open, abort */
+	if ((ACLChannel != NULL) && (ACLChannel->State != BT_Channel_Open))
 	  return BT_SENDPACKET_ChannelNotOpen;
 
 	/* Fill out the packet's header from the remote device connection information structure */
 	ACLPacketHeader.ConnectionHandle      = (Bluetooth_Connection.ConnectionHandle | BT_ACL_FIRST_AUTOFLUSH);
 	ACLPacketHeader.DataLength            = sizeof(DataHeader) + DataLen;
 	DataHeader.PayloadLength              = DataLen;
-	DataHeader.DestinationChannel         = (Channel == NULL) ? BT_CHANNEL_SIGNALING : Channel->RemoteNumber;
+	DataHeader.DestinationChannel         = (ACLChannel == NULL) ? BT_CHANNEL_SIGNALING : ACLChannel->RemoteNumber;
 
 	Pipe_SelectPipe(BLUETOOTH_DATA_OUT_PIPE);
+
+	Pipe_WaitUntilReady();
 	Pipe_Unfreeze();
-	
+
 	/* Write the packet contents to the pipe so that it can be sent to the remote device */
 	Pipe_Write_Stream_LE(&ACLPacketHeader, sizeof(ACLPacketHeader));
 	Pipe_Write_Stream_LE(&DataHeader, sizeof(DataHeader));
@@ -247,7 +298,7 @@ uint8_t Bluetooth_SendPacket(void* Data, const uint16_t DataLen, Bluetooth_Chann
 	return BT_SENDPACKET_NoError;
 }
 
-/** Opens a bluetooth channel to the currently connected remote device, so that data can be exchanged.
+/** Opens a Bluetooth channel to the currently connected remote device, so that data can be exchanged.
  *
  *  \note The channel is not immediately opened when this function returns - it must undergo a two way
  *        connection and configuration process first as the main Bluetooth stack processing task is
@@ -265,7 +316,7 @@ Bluetooth_Channel_t* Bluetooth_OpenChannel(const uint16_t PSM)
 	/* Search through the channel information list for a free channel item */
 	for (uint8_t i = 0; i < BLUETOOTH_MAX_OPEN_CHANNELS; i++)
 	{
-		if (Bluetooth_Connection.Channels[i].State == Channel_Closed)
+		if (Bluetooth_Connection.Channels[i].State == BT_Channel_Closed)
 		{
 			ChannelData = &Bluetooth_Connection.Channels[i];
 			
@@ -284,7 +335,7 @@ Bluetooth_Channel_t* Bluetooth_OpenChannel(const uint16_t PSM)
 	ChannelData->RemoteNumber = 0;
 	ChannelData->PSM          = PSM;
 	ChannelData->LocalMTU     = MAXIMUM_CHANNEL_MTU;
-	ChannelData->State        = Channel_WaitConnectRsp;
+	ChannelData->State        = BT_Channel_WaitConnectRsp;
 	  
 	struct
 	{
@@ -294,7 +345,7 @@ Bluetooth_Channel_t* Bluetooth_OpenChannel(const uint16_t PSM)
 
 	/* Fill out the Signal Command header in the response packet */
 	PacketData.SignalCommandHeader.Code              = BT_SIGNAL_CONNECTION_REQUEST;
-	PacketData.SignalCommandHeader.Identifier        = ++Bluetooth_Connection.SignallingIdentifier;
+	PacketData.SignalCommandHeader.Identifier        = ++Bluetooth_Connection.SignalingIdentifier;
 	PacketData.SignalCommandHeader.Length            = sizeof(PacketData.ConnectionRequest);
 	
 	/* Fill out the Connection Request in the response packet */
@@ -310,7 +361,7 @@ Bluetooth_Channel_t* Bluetooth_OpenChannel(const uint16_t PSM)
 	return ChannelData;
 }
 
-/** Closes a bluetooth channel that is open to the currently connected remote device, so that no further data
+/** Closes a Bluetooth channel that is open to the currently connected remote device, so that no further data
  *  can be exchanged.
  *
  *  \note The channel is not immediately closed when this function returns - it must undergo an asynchronous
@@ -318,16 +369,16 @@ Bluetooth_Channel_t* Bluetooth_OpenChannel(const uint16_t PSM)
  *        returned channel is unusable by the user application upon return however the channel is not completely
  *        closed until its State element has progressed to the Closed state.
  *
- * \param[in,out] Channel  Channel information structure of the channel to close
+ * \param[in,out] ACLChannel  ACL channel information structure of the channel to close
  */
-void Bluetooth_CloseChannel(Bluetooth_Channel_t* const Channel)
+void Bluetooth_CloseChannel(Bluetooth_Channel_t* const ACLChannel)
 {
 	/* Don't try to close a non-existing or already closed channel */
-	if ((Channel == NULL) || (Channel->State == Channel_Closed))
+	if ((ACLChannel == NULL) || (ACLChannel->State == BT_Channel_Closed))
 	  return;
 
 	/* Set the channel's state to the start of the teardown process */
-	Channel->State = Channel_WaitDisconnect;
+	ACLChannel->State = BT_Channel_WaitDisconnect;
 
 	struct
 	{
@@ -337,12 +388,12 @@ void Bluetooth_CloseChannel(Bluetooth_Channel_t* const Channel)
 	
 	/* Fill out the Signal Command header in the response packet */
 	PacketData.SignalCommandHeader.Code            = BT_SIGNAL_DISCONNECTION_REQUEST;
-	PacketData.SignalCommandHeader.Identifier      = ++Bluetooth_Connection.SignallingIdentifier;
+	PacketData.SignalCommandHeader.Identifier      = ++Bluetooth_Connection.SignalingIdentifier;
 	PacketData.SignalCommandHeader.Length          = sizeof(PacketData.DisconnectionRequest);
 
 	/* Fill out the Disconnection Request in the response packet */
-	PacketData.DisconnectionRequest.DestinationChannel = Channel->RemoteNumber;
-	PacketData.DisconnectionRequest.SourceChannel = Channel->LocalNumber;
+	PacketData.DisconnectionRequest.DestinationChannel = ACLChannel->RemoteNumber;
+	PacketData.DisconnectionRequest.SourceChannel      = ACLChannel->LocalNumber;
 
 	Bluetooth_SendPacket(&PacketData, sizeof(PacketData), NULL);
 	
@@ -363,11 +414,11 @@ static inline void Bluetooth_Signal_ConnectionReq(const BT_Signal_Header_t* cons
 
 	Pipe_ClearIN();
 	Pipe_Freeze();
-
+	
 	BT_ACL_DEBUG(1, "<< L2CAP Connection Request");
 	BT_ACL_DEBUG(2, "-- PSM: 0x%04X", ConnectionRequest.PSM);
 	BT_ACL_DEBUG(2, "-- Source Channel: 0x%04X", ConnectionRequest.SourceChannel);
-	
+
 	/* Try to retrieve the existing channel's information structure if it exists */
 	Bluetooth_Channel_t* ChannelData = Bluetooth_GetChannelData(ConnectionRequest.SourceChannel, CHANNEL_SEARCH_REMOTENUMBER);
 
@@ -377,7 +428,7 @@ static inline void Bluetooth_Signal_ConnectionReq(const BT_Signal_Header_t* cons
 		/* Look through the channel information list for a free entry */
 		for (uint8_t i = 0; i < BLUETOOTH_MAX_OPEN_CHANNELS; i++)
 		{
-			if (Bluetooth_Connection.Channels[i].State == Channel_Closed)
+			if (Bluetooth_Connection.Channels[i].State == BT_Channel_Closed)
 			{
 				ChannelData = &Bluetooth_Connection.Channels[i];
 
@@ -400,7 +451,7 @@ static inline void Bluetooth_Signal_ConnectionReq(const BT_Signal_Header_t* cons
 			ChannelData->RemoteNumber = ConnectionRequest.SourceChannel;
 			ChannelData->PSM          = ConnectionRequest.PSM;
 			ChannelData->LocalMTU     = MAXIMUM_CHANNEL_MTU;
-			ChannelData->State        = Channel_Config_WaitConfig;
+			ChannelData->State        = BT_Channel_Config_WaitConfig;
 			
 			ChannelStatus = BT_CONNECTION_SUCCESSFUL;
 		}
@@ -462,7 +513,7 @@ static inline void Bluetooth_Signal_ConnectionResp(const BT_Signal_Header_t* con
 		/* Set the channel structure's remote channel number to the channel allocated on the remote device */
 		ChannelData->RemoteNumber = ConnectionResponse.SourceChannel;
 		ChannelData->State        = (ConnectionResponse.Result == BT_CONNECTION_SUCCESSFUL) ?
-		                             Channel_Config_WaitConfig : Channel_Closed;
+		                             BT_Channel_Config_WaitConfig : BT_Channel_Closed;
 	}
 }
 
@@ -535,14 +586,15 @@ static inline void Bluetooth_Signal_ConfigurationReq(const BT_Signal_Header_t* c
 	{
 		switch (ChannelData->State)
 		{
-			case Channel_Config_WaitConfig:
-				ChannelData->State = Channel_Config_WaitSendConfig;
+			case BT_Channel_Config_WaitConfig:
+				ChannelData->State = BT_Channel_Config_WaitSendConfig;
 				break;
-			case Channel_Config_WaitReqResp:
-				ChannelData->State = Channel_Config_WaitResp;
+			case BT_Channel_Config_WaitReqResp:
+				ChannelData->State = BT_Channel_Config_WaitResp;
 				break;
-			case Channel_Config_WaitReq:
-				ChannelData->State = Channel_Open;
+			case BT_Channel_Config_WaitReq:
+				ChannelData->State = BT_Channel_Open;
+				Bluetooth_ChannelOpened(ChannelData);
 				break;
 		}
 	}
@@ -575,23 +627,24 @@ static inline void Bluetooth_Signal_ConfigurationResp(const BT_Signal_Header_t* 
 	/* Only update the channel's state if it was found in the channel list */
 	if (ChannelData != NULL)
 	{
-		/* Check if the channel configuration completed successfuly */
+		/* Check if the channel configuration completed successfully */
 		if (ConfigurationResponse.Result == BT_CONFIGURATION_SUCCESSFUL)
 		{
 			switch (ChannelData->State)
 			{
-				case Channel_Config_WaitReqResp:
-					ChannelData->State = Channel_Config_WaitReq;
+				case BT_Channel_Config_WaitReqResp:
+					ChannelData->State = BT_Channel_Config_WaitReq;
 					break;
-				case Channel_Config_WaitResp:
-					ChannelData->State = Channel_Open;
+				case BT_Channel_Config_WaitResp:
+					ChannelData->State = BT_Channel_Open;
+					Bluetooth_ChannelOpened(ChannelData);
 					break;
 			}	
 		}
 		else
 		{
 			/* Configuration failed - close the channel */
-			ChannelData->State = Channel_Closed;
+			ChannelData->State = BT_Channel_Closed;
 		}
 	}
 }
@@ -635,7 +688,7 @@ static inline void Bluetooth_Signal_DisconnectionReq(const BT_Signal_Header_t* c
 
 	/* If the channel was found in the channel list, close it */
 	if (ChannelData != NULL)
-	  ChannelData->State = Channel_Closed;
+	  ChannelData->State = BT_Channel_Closed;
 
 	BT_ACL_DEBUG(1, ">> L2CAP Disconnection Response");
 	BT_ACL_DEBUG(2, "-- Source Channel: 0x%04X", ResponsePacket.DisconnectionResponse.SourceChannel);
@@ -664,7 +717,7 @@ static inline void Bluetooth_Signal_DisconnectionResp(const BT_Signal_Header_t* 
 	
 	/* If the channel was found in the channel list, close it */	
 	if (ChannelData != NULL)
-	  ChannelData->State = Channel_Closed;
+	  ChannelData->State = BT_Channel_Closed;
 }
 
 /** Internal Bluetooth stack Signal Command processing routine for an Echo Request command.

@@ -42,14 +42,14 @@
 		#include "MouseHost.h"
 		
 	/* Macros: */
-		/** Interface Class value for the Human Interface Device class */
+		/** Interface Class value for the Human Interface Device class. */
 		#define MOUSE_CLASS                 0x03
 
-		/** Interface Protocol value for a Boot Protocol Mouse compliant device */
+		/** Interface Protocol value for a Boot Protocol Mouse compliant device. */
 		#define MOUSE_PROTOCOL              0x02
 	
 	/* Enums: */
-		/** Enum for the possible return codes of the ProcessConfigurationDescriptor() function. */
+		/** Enum for the possible return codes of the \ref ProcessConfigurationDescriptor() function. */
 		enum MouseHost_GetConfigDescriptorDataCodes_t
 		{
 			SuccessfulConfigRead            = 0, /**< Configuration Descriptor was processed successfully */

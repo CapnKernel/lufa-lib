@@ -38,19 +38,19 @@
 
 #if defined(ENABLE_XPROG_PROTOCOL) || defined(__DOXYGEN__)
 /** Base absolute address for the target's NVM controller for PDI programming */
-uint32_t XPROG_Param_NVMBase = 0x010001C0;
+uint32_t XPROG_Param_NVMBase       = 0x010001C0;
 
 /** Size in bytes of the target's EEPROM page */
-uint16_t XPROG_Param_EEPageSize;
+uint16_t XPROG_Param_EEPageSize    = 32;
 
 /** Address of the TPI device's NVMCMD register for TPI programming */
-uint8_t  XPROG_Param_NVMCMDRegAddr;
+uint8_t  XPROG_Param_NVMCMDRegAddr = 0x33;
 
 /** Address of the TPI device's NVMCSR register for TPI programming */
-uint8_t  XPROG_Param_NVMCSRRegAddr;
+uint8_t  XPROG_Param_NVMCSRRegAddr = 0x32;
 
 /** Currently selected XPROG programming protocol */
-uint8_t  XPROG_SelectedProtocol = XPRG_PROTOCOL_PDI;
+uint8_t  XPROG_SelectedProtocol    = XPRG_PROTOCOL_PDI;
 
 /** Handler for the CMD_XPROG_SETMODE command, which sets the programmer-to-target protocol used for PDI/TPI
  *  programming.
@@ -115,7 +115,7 @@ static void XPROGProtocol_EnterXPROGMode(void)
 	Endpoint_SelectEndpoint(AVRISP_DATA_IN_EPNUM);
 	Endpoint_SetEndpointDirection(ENDPOINT_DIR_IN);
 	
-	bool NVMBusEnabled;
+	bool NVMBusEnabled = false;
 
 	if (XPROG_SelectedProtocol == XPRG_PROTOCOL_PDI)
 	{
@@ -131,14 +131,14 @@ static void XPROGProtocol_EnterXPROGMode(void)
 		XPROGTarget_SendByte(0x07);
 
 		/* Enable access to the XPROG NVM bus by sending the documented NVM access key to the device */
-		XPROGTarget_SendByte(PDI_CMD_KEY);	
+		XPROGTarget_SendByte(PDI_CMD_KEY);
 		for (uint8_t i = sizeof(PDI_NVMENABLE_KEY); i > 0; i--)
 		  XPROGTarget_SendByte(PDI_NVMENABLE_KEY[i - 1]);
 
 		/* Wait until the NVM bus becomes active */
 		NVMBusEnabled = XMEGANVM_WaitWhileNVMBusBusy();
 	}
-	else
+	else if (XPROG_SelectedProtocol == XPRG_PROTOCOL_TPI)
 	{
 		/* Enable TPI programming mode with the attached target */
 		XPROGTarget_EnableTargetTPI();
@@ -256,7 +256,7 @@ static void XPROGProtocol_Erase(void)
 				break;
 		}
 		
-		/* Erase the target memory, indicate timeout if ocurred */
+		/* Erase the target memory, indicate timeout if occurred */
 		if (!(XMEGANVM_EraseMemory(EraseCommand, Erase_XPROG_Params.Address)))
 		  ReturnStatus = XPRG_ERR_TIMEOUT;
 	}
@@ -267,7 +267,7 @@ static void XPROGProtocol_Erase(void)
 		else
 		  EraseCommand = TINY_NVM_CMD_SECTIONERASE;
 	
-		/* Erase the target memory, indicate timeout if ocurred */
+		/* Erase the target memory, indicate timeout if occurred */
 		if (!(TINYNVM_EraseMemory(EraseCommand, Erase_XPROG_Params.Address)))
 		  ReturnStatus = XPRG_ERR_TIMEOUT;
 	}

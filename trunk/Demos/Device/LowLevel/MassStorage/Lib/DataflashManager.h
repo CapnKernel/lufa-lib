@@ -52,7 +52,7 @@
 		#endif
 
 	/* Defines: */
-		/** Total number of bytes of the storage medium, comprised of one or more dataflash ICs. */
+		/** Total number of bytes of the storage medium, comprised of one or more Dataflash ICs. */
 		#define VIRTUAL_MEMORY_BYTES                ((uint32_t)DATAFLASH_PAGES * DATAFLASH_PAGE_SIZE * DATAFLASH_TOTALCHIPS)
 
 		/** Block size of the device. This is kept at 512 to remain compatible with the OS despite the underlying
@@ -65,12 +65,24 @@
 		 */
 		#define VIRTUAL_MEMORY_BLOCKS               (VIRTUAL_MEMORY_BYTES / VIRTUAL_MEMORY_BLOCK_SIZE)
 		
+		/** Total number of Logical Units (drives) in the device. The total device capacity is shared equally between
+		 *  each drive - this can be set to any positive non-zero amount.
+		 */
+		#define TOTAL_LUNS                           1
+		
+		/** Blocks in each LUN, calculated from the total capacity divided by the total number of Logical Units in the device. */
+		#define LUN_MEDIA_BLOCKS                    (VIRTUAL_MEMORY_BLOCKS / TOTAL_LUNS)   
+		
 	/* Function Prototypes: */
-		void DataflashManager_WriteBlocks(const uint32_t BlockAddress, uint16_t TotalBlocks);
-		void DataflashManager_ReadBlocks(const uint32_t BlockAddress, uint16_t TotalBlocks);
-		void DataflashManager_WriteBlocks_RAM(const uint32_t BlockAddress, uint16_t TotalBlocks,
+		void DataflashManager_WriteBlocks(const uint32_t BlockAddress,
+		                                  uint16_t TotalBlocks);
+		void DataflashManager_ReadBlocks(const uint32_t BlockAddress,
+		                                 uint16_t TotalBlocks);
+		void DataflashManager_WriteBlocks_RAM(const uint32_t BlockAddress,
+		                                      uint16_t TotalBlocks,
 		                                      uint8_t* BufferPtr) ATTR_NON_NULL_PTR_ARG(3);
-		void DataflashManager_ReadBlocks_RAM(const uint32_t BlockAddress, uint16_t TotalBlocks,
+		void DataflashManager_ReadBlocks_RAM(const uint32_t BlockAddress,
+		                                     uint16_t TotalBlocks,
 		                                     uint8_t* BufferPtr) ATTR_NON_NULL_PTR_ARG(3);
 		void DataflashManager_ResetDataflashProtections(void);
 		bool DataflashManager_CheckDataflashOperation(void);

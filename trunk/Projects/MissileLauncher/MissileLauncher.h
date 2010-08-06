@@ -54,10 +54,10 @@
 		#include "ConfigDescriptor.h"
 		
 	/* Macros: */
-		/** Pipe number for the HID data IN pipe */
+		/** Pipe number for the HID data IN pipe. */
 		#define HID_DATA_IN_PIPE          1
 		
-		/** Pipe number for the HID data OUT pipe */
+		/** Pipe number for the HID data OUT pipe. */
 		#define HID_DATA_OUT_PIPE         2
 
 		/** HID Class specific request to send a HID report to the device. */
@@ -75,14 +75,15 @@
 		/** LED mask for the library LED driver, to indicate that an error has occurred in the USB interface. */
 		#define LEDMASK_USB_ERROR        (LEDS_LED1 | LEDS_LED3)
 		
-		/** Size of the Launcher report command buffer */
+		/** Size of the Launcher report command buffer. */
 		#define LAUNCHER_CMD_BUFFER_SIZE 64
 		
 	/* Function Prototypes: */
 		void SetupHardware(void);
 
 		void Read_Joystick_Status(void);
-        void Send_Command_Report(uint8_t* const Report, const uint16_t ReportSize);
+        void Send_Command_Report(uint8_t* const Report,
+		                         const uint16_t ReportSize);
         void Send_Command(uint8_t* const Command);
 
 		void HID_Host_Task(void);
@@ -90,10 +91,12 @@
 		void EVENT_USB_Host_HostError(const uint8_t ErrorCode);
 		void EVENT_USB_Host_DeviceAttached(void);
 		void EVENT_USB_Host_DeviceUnattached(void);
-		void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode, const uint8_t SubErrorCode);
+		void EVENT_USB_Host_DeviceEnumerationFailed(const uint8_t ErrorCode,
+		                                            const uint8_t SubErrorCode);
 		void EVENT_USB_Host_DeviceEnumerationComplete(void);
 
 		void DiscardNextReport(void);
-		void WriteNextReport(uint8_t* const ReportOUTData, const uint16_t ReportLength);
+		void WriteNextReport(uint8_t* const ReportOUTData,
+		                     const uint16_t ReportLength);
 		
 #endif

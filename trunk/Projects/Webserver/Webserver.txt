@@ -48,7 +48,7 @@
  *  \section SSec_Description Project Description: 
  *
  *  Simple HTTP webserver project. This project combines the LUFA library with the uIP TCP/IP full network stack and FatFS
- *  library to create a RNDIS host capable of serving out HTTP webpages to multiple hosts simultaneously. This project
+ *  library to create a RNDIS host capable of serving out HTTP web pages to multiple hosts simultaneously. This project
  *  demonstrates how the libraries can be combined into a robust network enabled application, with the addition of a RNDIS
  *  network device.
  *
@@ -63,7 +63,7 @@
  *  device being used for this project to work if the DHCP client is disabled (see \ref SSec_Options) - otherwise, the device
  *  will query the network's DHCP server for these parameters automatically.
  *
- *  When properly configured, the webserver can be accessed from any HTTP webrowser by typing in the device's statically or
+ *  When properly configured, the webserver can be accessed from any HTTP web browser by typing in the device's statically or
  *  dynamically allocated IP address. The TELNET client can be accessed via any network socket app by connecting to the device
  *  on port 23 on the device's statically or dynamically allocated IP address.
  *
@@ -79,13 +79,13 @@
  *   </tr>
  *   <tr>
  *    <td>ENABLE_TELNET_SERVER</td>
- *    <td>Makefile CDEFS</td>
- *    <td>When defined, this enables the TELNET server in addition to the HTTP webserver, which listens for incomming connections
+ *    <td>Makefile LUFA_OPTS</td>
+ *    <td>When defined, this enables the TELNET server in addition to the HTTP webserver, which listens for incoming connections
  *        and processes user commands.</td>
  *   </tr>
  *   <tr>
  *    <td>ENABLE_DHCP_CLIENT</td>
- *    <td>Makefile CDEFS</td>
+ *    <td>Makefile LUFA_OPTS</td>
  *    <td>When defined, this enables the DHCP client for dynamic IP allocation of the network settings from a DHCP server.</td>
  *   </tr>
  *   <tr>
@@ -106,8 +106,8 @@
  *   </tr>
  *   <tr>
  *    <td>MAX_URI_LENGTH</td>
- *    <td>Makefile CDEFS</td>
- *    <td>Maximum length of a URI for the Webserver. This is the maximum file path, including subdirectories and seperators.</td>
+ *    <td>Makefile LUFA_OPTS</td>
+ *    <td>Maximum length of a URI for the Webserver. This is the maximum file path, including subdirectories and separators.</td>
  *   </tr>
  *  </table>
  */

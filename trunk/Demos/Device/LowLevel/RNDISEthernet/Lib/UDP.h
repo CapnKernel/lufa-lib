@@ -45,17 +45,17 @@
 		#include "DHCP.h"
 	
 	/* Macros: */
-		/** Source UDP port for a DHCP request */
+		/** Source UDP port for a DHCP request. */
 		#define UDP_PORT_DHCP_REQUEST 67
 
-		/** Destination UDP port for a DHCP reply */
+		/** Destination UDP port for a DHCP reply. */
 		#define UDP_PORT_DHCP_REPLY   68
 
-		/** Source UDP port for a DNS request/response */
+		/** Source UDP port for a DNS request/response. */
 		#define UDP_PORT_DNS          53
 
 	/* Type Defines: */
-		/** Type define for a UDP packet header */
+		/** Type define for a UDP packet header. */
 		typedef struct
 		{
 			uint16_t SourcePort; /**< Packet source port */
@@ -65,6 +65,8 @@
 		} UDP_Header_t;
 		
 	/* Function Prototypes: */
-		int16_t UDP_ProcessUDPPacket(void* IPHeaderInStart, void* UDPHeaderInStart, void* UDPHeaderOutStart);
+		int16_t UDP_ProcessUDPPacket(void* IPHeaderInStart,
+		                             void* UDPHeaderInStart,
+		                             void* UDPHeaderOutStart);
 
 #endif

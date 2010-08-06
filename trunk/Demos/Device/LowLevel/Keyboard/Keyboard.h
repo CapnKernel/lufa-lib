@@ -7,8 +7,8 @@
 */
 
 /*
+  Copyright 2010  Dean Camera (dean [at] fourwalledcubicle [dot] com)
   Copyright 2010  Denver Gingerich (denver [at] ossguy [dot] com)
-      Based on code by Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
   Permission to use, copy, modify, distribute, and sell this 
   software and its documentation for any purpose is hereby granted
@@ -54,7 +54,7 @@
 		#include <LUFA/Drivers/Board/LEDs.h>
 
 	/* Macros: */
-		/** Idle period indicating that reports should be sent only when the inputs have changed */
+		/** Idle period indicating that reports should be sent only when the inputs have changed. */
 		#define HID_IDLE_CHANGESONLY        0
 
 		/** HID Class specific request to get the next HID report from the device. */
@@ -144,8 +144,8 @@
 		void EVENT_USB_Device_UnhandledControlRequest(void);
 		void EVENT_USB_Device_StartOfFrame(void);
 
-		void CreateKeyboardReport(USB_KeyboardReport_Data_t* ReportData);
-		void ProcessLEDReport(uint8_t LEDReport);
+		void CreateKeyboardReport(USB_KeyboardReport_Data_t* const ReportData);
+		void ProcessLEDReport(const uint8_t LEDReport);
 		void SendNextReport(void);
 		void ReceiveNextReport(void);
 

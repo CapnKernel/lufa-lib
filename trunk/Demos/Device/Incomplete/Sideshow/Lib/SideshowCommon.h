@@ -85,7 +85,7 @@
 				int ErrorCode     : 6;
 				int NAK           : 1;
 				int Response      : 1;				
-			};
+			} TypeFields;
 		} SideShowPacketType_t;
 	
 		typedef struct
@@ -96,7 +96,8 @@
 		} SideShow_PacketHeader_t;
 
 	/* Function Prototypes: */
-		uint16_t SideShow_Read_Unicode_String(void* UnicodeString, const uint16_t MaxBytes);
+		uint16_t SideShow_Read_Unicode_String(void* UnicodeString,
+		                                      const uint16_t MaxBytes);
 		void     SideShow_Write_Unicode_String(void* UnicodeString);
 		void     SideShow_Discard_Byte_Stream(void);
 

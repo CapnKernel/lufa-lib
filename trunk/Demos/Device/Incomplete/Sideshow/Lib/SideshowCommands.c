@@ -50,7 +50,7 @@ void Sideshow_ProcessCommandPacket(void)
 	Endpoint_SelectEndpoint(SIDESHOW_OUT_EPNUM);	
 	Endpoint_Read_Stream_LE(&PacketHeader, sizeof(SideShow_PacketHeader_t));
 	
-	PacketHeader.Type.Response = true;
+	PacketHeader.Type.TypeFields.Response = true;
 
 	printf("\r\nCmd: %lX", (PacketHeader.Type.TypeLong & 0x00FFFFFF));
 
@@ -108,7 +108,7 @@ void Sideshow_ProcessCommandPacket(void)
 			Endpoint_ClearOUT();
 
 			PacketHeader.Length   = sizeof(SideShow_PacketHeader_t);
-			PacketHeader.Type.NAK = true;
+			PacketHeader.Type.TypeFields.NAK = true;
 			
 			Endpoint_SelectEndpoint(SIDESHOW_IN_EPNUM);	
 			Endpoint_Write_Stream_LE(&PacketHeader, sizeof(SideShow_PacketHeader_t));		
@@ -135,7 +135,7 @@ static void SideShow_Sync(SideShow_PacketHeader_t* const PacketHeader)
 	Endpoint_ClearOUT();
 	
 	if (!(GUID_COMPARE(&ProtocolGUID, (uint32_t[])STANDARD_PROTOCOL_GUID)))
-	  PacketHeader->Type.NAK = true;
+	  PacketHeader->Type.TypeFields.NAK = true;
 	
 	Endpoint_SelectEndpoint(SIDESHOW_IN_EPNUM);
 	Endpoint_Write_Stream_LE(PacketHeader, sizeof(SideShow_PacketHeader_t));		
@@ -247,7 +247,7 @@ static void SideShow_GetCapabilities(SideShow_PacketHeader_t* const PacketHeader
 	}	
 	else
 	{
-		PacketHeader->Type.NAK = true;		
+		PacketHeader->Type.TypeFields.NAK = true;		
 		
 		printf(" WRONG GUID");
 		printf(" %lX %lX %lX %lX", Property.PropertyGUID.Chunks[0], Property.PropertyGUID.Chunks[1],
@@ -257,7 +257,7 @@ static void SideShow_GetCapabilities(SideShow_PacketHeader_t* const PacketHeader
 	Endpoint_SelectEndpoint(SIDESHOW_IN_EPNUM);
 	Endpoint_Write_Stream_LE(PacketHeader, sizeof(SideShow_PacketHeader_t));
 	
-	if (!(PacketHeader->Type.NAK))
+	if (!(PacketHeader->Type.TypeFields.NAK))
 	{
 		switch (PropertyData.DataType)
 		{
@@ -280,7 +280,8 @@ static void SideShow_GetCapabilities(SideShow_PacketHeader_t* const PacketHeader
 	return;
 }
 
-static void SideShow_GetString(SideShow_PacketHeader_t* const PacketHeader, void* const UnicodeStruct)
+static void SideShow_GetString(SideShow_PacketHeader_t* const PacketHeader,
+                               void* const UnicodeStruct)
 {
 	Endpoint_ClearOUT();
 
@@ -355,7 +356,7 @@ static void SideShow_AddApplication(SideShow_PacketHeader_t* const PacketHeader)
 		Endpoint_Discard_Stream(PacketHeader->Length);
 		Endpoint_ClearOUT();
 
-		PacketHeader->Type.NAK = true;
+		PacketHeader->Type.TypeFields.NAK = true;
 	}
 	else
 	{
@@ -393,7 +394,7 @@ static void SideShow_DeleteApplication(SideShow_PacketHeader_t* const PacketHead
 	if (AppToDelete != NULL)
 	  AppToDelete->InUse = false;
 	else
-	  PacketHeader->Type.NAK = true;
+	  PacketHeader->Type.TypeFields.NAK = true;
 
 	PacketHeader->Length = sizeof(SideShow_PacketHeader_t);
 
@@ -428,11 +429,11 @@ static void SideShow_AddContent(SideShow_PacketHeader_t* const PacketHeader)
 	if (Application == NULL)
 	{
 		SideShow_Discard_Byte_Stream();
-		PacketHeader->Type.NAK = true;
+		PacketHeader->Type.TypeFields.NAK = true;
 	}
 	else if (!(SideShow_AddSimpleContent(PacketHeader, Application)))
 	{
-		PacketHeader->Type.NAK = true;
+		PacketHeader->Type.TypeFields.NAK = true;
 	}
 	
 	Endpoint_ClearOUT();
@@ -460,7 +461,7 @@ static void SideShow_DeleteContent(SideShow_PacketHeader_t* const PacketHeader)
 	if ((Application != NULL) && (Application->CurrentContentID == ContentID))
 	  Application->HaveContent = false;
 	else
-	  PacketHeader->Type.NAK = true;
+	  PacketHeader->Type.TypeFields.NAK = true;
 	  
 	PacketHeader->Length = sizeof(SideShow_PacketHeader_t);
 
@@ -483,7 +484,7 @@ static void SideShow_DeleteAllContent(SideShow_PacketHeader_t* const PacketHeade
 	if (Application != NULL)
 	  Application->HaveContent = false;
 	else
-	  PacketHeader->Type.NAK = true;	  
+	  PacketHeader->Type.TypeFields.NAK = true;	  
 
 	PacketHeader->Length = sizeof(SideShow_PacketHeader_t);
 

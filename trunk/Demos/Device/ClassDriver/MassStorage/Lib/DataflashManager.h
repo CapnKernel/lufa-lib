@@ -53,7 +53,7 @@
 		#endif
 
 	/* Defines: */
-		/** Total number of bytes of the storage medium, comprised of one or more dataflash ICs. */
+		/** Total number of bytes of the storage medium, comprised of one or more Dataflash ICs. */
 		#define VIRTUAL_MEMORY_BYTES                ((uint32_t)DATAFLASH_PAGES * DATAFLASH_PAGE_SIZE * DATAFLASH_TOTALCHIPS)
 
 		/** Block size of the device. This is kept at 512 to remain compatible with the OS despite the underlying
@@ -67,13 +67,17 @@
 		#define VIRTUAL_MEMORY_BLOCKS               (VIRTUAL_MEMORY_BYTES / VIRTUAL_MEMORY_BLOCK_SIZE)
 		
 	/* Function Prototypes: */
-		void DataflashManager_WriteBlocks(USB_ClassInfo_MS_Device_t* MSInterfaceInfo, const uint32_t BlockAddress,
+		void DataflashManager_WriteBlocks(USB_ClassInfo_MS_Device_t* const MSInterfaceInfo,
+		                                  const uint32_t BlockAddress,
 		                                  uint16_t TotalBlocks);
-		void DataflashManager_ReadBlocks(USB_ClassInfo_MS_Device_t* MSInterfaceInfo, const uint32_t BlockAddress,
+		void DataflashManager_ReadBlocks(USB_ClassInfo_MS_Device_t* const MSInterfaceInfo,
+		                                 const uint32_t BlockAddress,
 		                                 uint16_t TotalBlocks);
-		void DataflashManager_WriteBlocks_RAM(const uint32_t BlockAddress, uint16_t TotalBlocks,
+		void DataflashManager_WriteBlocks_RAM(const uint32_t BlockAddress,
+		                                      uint16_t TotalBlocks,
 		                                      uint8_t* BufferPtr) ATTR_NON_NULL_PTR_ARG(3);
-		void DataflashManager_ReadBlocks_RAM(const uint32_t BlockAddress, uint16_t TotalBlocks,
+		void DataflashManager_ReadBlocks_RAM(const uint32_t BlockAddress,
+		                                     uint16_t TotalBlocks,
 		                                     uint8_t* BufferPtr) ATTR_NON_NULL_PTR_ARG(3);
 		void DataflashManager_ResetDataflashProtections(void);
 		bool DataflashManager_CheckDataflashOperation(void);
