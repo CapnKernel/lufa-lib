@@ -300,10 +300,6 @@ static WhichAxisType xymode = 0;
 static uint16_t sweep = LOWER_SWEEP;
 #endif
 
-static Coords rawVal = {0, 0};
-static Coords mappedVal;
-static Coords finalVal;
-
 typedef enum {
 	eUp = 0,
 	eDown = 1,
@@ -315,17 +311,20 @@ typedef enum {
 	eNormal,
 } ModeType;
 
-static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport)
+static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport, Coords *rawVal)
 {
+	static Coords mappedVal;
+	static Coords finalVal;
+
 	// Touchscreen
 	if (xymode == eX)
 	{
-		rawVal.x = read_X();
+		rawVal->x = read_X();
 		setup_Y();
 	}
 	else
 	{
-		rawVal.y = read_Y();
+		rawVal->y = read_Y();
 		setup_X();
 	}
 
@@ -348,7 +347,7 @@ static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport)
 #  endif
 #endif
 
-	mappedVal = rawVal;
+	mappedVal = *rawVal;
 	map(&mappedVal);
 
 	// Check for pen up/pen down state
@@ -369,13 +368,13 @@ static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport)
 	uint16_t ReportSize;
 	if (prevState == thisState && thisState == eUp)
 	{
-		// if we're up now and we were up before, don't report
+		// if we're up now and we were up before, don't report it
 		ReportSize = 0;
 	}
 	else
 	{
 		// if we're down now, or this is the first sample taken with
-		// pen up, report it.
+		// pen up after being down, report it.
 		ReportSize = sizeof(USB_TouchscreenReport_Data_t);
 	}
 
@@ -401,14 +400,15 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
                                          void* ReportData,
                                          uint16_t* const ReportSize)
 {
-	USB_TouchscreenReport_Data_t* TSReport = (USB_TouchscreenReport_Data_t *)ReportData;
-
 	static ModeType currentMode = eNormal;
+	static Coords rawVal = {0, 0};
+
+	USB_TouchscreenReport_Data_t* TSReport = (USB_TouchscreenReport_Data_t *)ReportData;
 
 	switch (currentMode)
 	{
 		case eNormal:
-			*ReportSize = mode_NORMAL(TSReport);
+			*ReportSize = mode_NORMAL(TSReport, &rawVal);
 			break;
 	}
 
