@@ -335,9 +335,6 @@ static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport, Coords *rawV
 	static Coords mappedVal;
 	static Coords finalVal;
 
-
-	read_XY(rawVal);
-
 #if 0
 	if (++sweep == UPPER_SWEEP)
 	{
@@ -410,9 +407,11 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
                                          uint16_t* const ReportSize)
 {
 	static ModeType currentMode = eNormal;
-	static Coords rawVal = {0, 0};
+	static Coords rawVal;
 
 	USB_TouchscreenReport_Data_t* TSReport = (USB_TouchscreenReport_Data_t *)ReportData;
+
+	read_XY(&rawVal);
 
 	switch (currentMode)
 	{
