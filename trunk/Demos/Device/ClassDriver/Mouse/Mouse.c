@@ -268,19 +268,23 @@ static int read_Y(void)
 	return ADC_GetChannelReading(5 | ADC_REFERENCE_AVCC | ADC_RIGHT_ADJUSTED);
 }
 
-static int mapX(const int x)
+// Map ADC readings (0-1023 but usually well within this, eg, 220-905)
+// into logical 0-1023.
+static void map(Coords *c)
 {
-	return x;
+	// These values come from my magic spreadsheet
+	c->x *= 25;
+	c->x >>= 4;
+	c->x += -342;
+	c->y *= 25;
+	c->y >>= 4;
+	c->y += -364;
 }
 
-static int mapY(const int y)
+static bool inBox(Coords *c)
 {
-	return y;
-}
-
-static bool inBox(const int xVal, const int yVal)
-{
-  return xVal > 0 && xVal < AXIS_MAX && yVal > 0 && yVal < AXIS_MAX;
+	// The magic value of 9999 will be regarded as out-of-box
+ 	return c->x >= 0 && c->x <= AXIS_MAX && c->y >= 0 && c->y <= AXIS_MAX;
 }
 
 typedef enum {
@@ -356,11 +360,11 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 #  endif
 #endif
 
-	mappedVal.x = mapX(rawVal.x);
-	mappedVal.y = mapY(rawVal.y);
+	mappedVal = rawVal;
+	map(&mappedVal);
 
 	// Check for pen up/pen down state
-	State thisState = inBox(mappedVal.x, mappedVal.y) ? eDown : eUp;
+	State thisState = inBox(&mappedVal) ? eDown : eUp;
 
 	// If we're in the down state, let's use these values.
 	// (If we're up, the old values don't get overwritten)
