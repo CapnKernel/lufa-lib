@@ -335,7 +335,7 @@ typedef enum {
 static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport, const Coords * const rawVal)
 {
 	static Coords mappedVal;
-	static Coords finalVal;
+	static Coords lastGood;
 
 #if 0
 	if (++sweep == UPPER_SWEEP)
@@ -362,19 +362,24 @@ static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport, const Coords
 
 	// Check for pen up/pen down state
 	StateType thisState = inBox(&mappedVal) ? eDown : eUp;
+	TSReport->Button = thisState == eDown ? 1 : 0;
 
 	// If we're in the down state, let's use these values, and keep them
 	// for when we're up.  If we're up, use the last known good values
 	// from when we were down.
 	if (thisState == eDown)
 	{
-		finalVal = mappedVal;
+		lastGood = mappedVal;
+	}
+	else
+	{
+		mappedVal = lastGood;
 	}
 
-	// Pack the data into the report struct
-	TSReport->Button = thisState == eDown ? 1 : 0;
-	TSReport->X = finalVal.x;
-	TSReport->Y = finalVal.y;
+	// Pack the data into the report struct.  Note, when we're up,
+	// we still report the last known good down position.
+	TSReport->X = lastGood.x;
+	TSReport->Y = lastGood.y;
 
 	uint16_t ReportSize;
 	if (prevState == thisState && thisState == eUp)
