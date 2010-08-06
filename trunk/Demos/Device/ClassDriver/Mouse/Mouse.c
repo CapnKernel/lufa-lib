@@ -1,3 +1,35 @@
+#define CONFIG_AXIS_ALTERNATE
+#define CONFIG_PEN_DOWN
+//#define CONFIG_BUTTON_DOWN
+//#define CONFIG_LED
+//#define CONFIG_LED_SHOWS_DOWN
+//#define CONFIG_TIMER
+//#define CONFIG_LED_SHOWS_TIMER
+//#define CONFIG_BUTTON
+//#define CONFIG_TIMER
+
+// If the reading is past this, it's likely to be a pen-up condition.
+#define AXIS_MAX 950
+
+#ifdef CONFIG_BUTTON
+// Set PB6 for input, with pullup enabled
+#define BUTTON_CONFIG  do {DDRB &= ~_BV(DDB6); PORTB |= _BV(PB6);} while (0);
+// Is button down?
+#define BUTTON_DOWN  (PINB & _BV(PB6))
+#endif
+
+#ifdef CONFIG_LED
+// PD6
+#define LED_CONFIG  (DDRD |= _BV(DDD6))
+#define LED_ON      (PORTD |= _BV(PD6))
+#define LED_OFF     (PORTD &= ~_BV(PD6))
+#define LED_TOGGLE  (PORTD ^= _BV(PD6))
+#endif
+
+#ifdef CONFIG_TIMER
+#define TIMER_CONFIG do {} while(0)
+#endif
+
 /*
              LUFA Library
      Copyright (C) Dean Camera, 2010.
@@ -33,20 +65,33 @@
  *  Main source file for the Mouse demo. This file contains the main tasks of
  *  the demo and is responsible for the initial application hardware configuration.
  *
+ * Touchscreen changes (c) 2010 by Mitch Davis (mjd+lufa-ts@afork.com).
+ * Copyright assigned to Dean Camera.
+ * 
  * pin 1 on TS is closest to corner
- *  ts         T         X Y
- *  pin 1 top  PF0  ADC0 - 5    
- *  pin 2 rite PF1  ADC1 0 -
+ *  On_TS Side Pin  ADC  X Y
+ *  pin 1 top  PF0  ADC0 P 5    
+ *  pin 2 rite PF1  ADC1 0 P
  *  pin 3 bott PF4  ADC4 A 0
- *  pin 4 left PF5  ADC5 5 A 
+ *  pin 4 left PF5  ADC5 5 A
+ *  0=0V, 5=5V, P=pulled high via 10k to Vcc, A=ADC input 
  */
 
 #include <LUFA/Drivers/Peripheral/ADC.h>
 
 #include "Mouse.h"
 
-// If the reading is past this, it's likely to be a pen-up condition.
-#define AXIS_MAX 950
+#ifdef CONFIG_BUTTON
+static void button_config(void)
+{
+	BUTTON_CONFIG;
+}
+
+static unsigned int button_down(void)
+{
+	return BUTTON_DOWN;
+}
+#endif
 
 typedef struct
 {
@@ -87,8 +132,28 @@ int main(void)
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
 	sei();
 
+#ifdef CONFIG_TIMER
+	TCNT1 = 0;
+	TCCR1B |= ((1 << CS10) | (1 << CS11)); // Set up timer at Fcpu/64 
+#endif
+
 	for (;;)
 	{
+#ifdef CONFIG_TIMER
+#if 0
+		LED_ON;
+		_delay_ms(500);
+		LED_OFF;
+		_delay_ms(500);
+#else
+		if (TCNT1 >= 10000)
+		{
+			LED_TOGGLE;
+			TCNT1 = 0;
+		}
+#endif
+#endif
+
 		HID_Device_USBTask(&Mouse_HID_Interface);
 		USB_USBTask();
 	}
@@ -110,11 +175,14 @@ void SetupHardware(void)
 	LEDs_Init();
 	USB_Init();
 
-#if 0
-	// PB4 and PB6 are outputs connected to LEDs
-	DDRB |= _BV(DDB4) | _BV(DDB6);
-	PORTB &= ~_BV(PB4);
-	PORTB |= _BV(PB6);
+#ifdef CONFIG_LED
+	/* LED output */
+	LED_CONFIG;
+	LED_OFF;
+#endif
+
+#ifdef CONFIG_BUTTON
+	button_config();
 #endif
 }
 
@@ -163,6 +231,8 @@ static void setup_X(void)
 	PORTF &= ~_BV(PF5); // clear bit (lo)
 
 	// Let's make PF0 an input, but with a pull-up.
+	// Coordinate reading without pulling other side
+	// high makes readings much worse.
 	DDRF &= ~_BV(DDF0);
 	PORTF |= _BV(PF0);
 }
@@ -177,6 +247,8 @@ static void setup_Y(void)
 	PORTF |= _BV(PF4); // set bit (hi)
 
 	// Let's make PF1 an input, but with a pull-up.
+	// Coordinate reading without pulling other side
+	// high makes readings much worse.
 	DDRF &= ~_BV(DDF1);
 	PORTF |= _BV(PF1);
 }
