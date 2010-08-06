@@ -7,6 +7,10 @@
 //#define CONFIG_BUTTON
 //#define CONFIG_TIMER
 
+#define TS_NORMAL
+// #define TS_RAMP
+// #define TS_BULLSEYE
+
 // If an axis reading is outside this range,
 // it's likely to be a pen-up condition.
 #define AXIS_MAX 1023
@@ -270,32 +274,6 @@ static int read_Y(void)
 	return ADC_GetChannelReading(5 | ADC_REFERENCE_AVCC | ADC_RIGHT_ADJUSTED);
 }
 
-#if 0
-// Old sweep stuff kept around for debugging.
-#  if defined(ADC_X) && !defined(ADC_Y)
-	rawXVal = read_X();
-	rawYVal = sweep;
-	setup_X();
-#  endif
-#  if !defined(ADC_X) && defined(ADC_Y)
-	rawXVal = sweep;
-	rawYVal = read_Y();
-	setup_Y();
-#  endif
-#endif
-#if 0
-#define TICKS_FOR_ONE_DIR 125
-#define LOWER_SWEEP 0
-#define UPPER_SWEEP 255
-static uint16_t sweep = LOWER_SWEEP;
-#endif
-#if 0
-	if (++sweep == UPPER_SWEEP)
-	{
-		sweep = LOWER_SWEEP;
-	}
-#endif
-
 // Return values for X and Y.  (Since we can't read both quickly, we cheat
 // by only updating one axis.  The function alternates between axes
 static void read_XY(Coords *c)
@@ -350,9 +328,18 @@ typedef enum {
 static StateType prevState = eUp;
 
 typedef enum {
+#ifdef TS_NORMAL
 	eNormal,
+#endif
+#ifdef TS_RAMP
+	eRamp,
+#endif
+#ifdef TS_BULLSEYE
+	eBullseye,
+#endif
 } ModeType;
 
+#ifdef TS_NORMAL
 static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport, const Coords * const rawVal)
 {
 	static Coords mappedVal;
@@ -419,6 +406,44 @@ static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport, const Coords
 
 	return ReportSize;
 }
+#endif
+
+#ifdef TS_RAMP
+static void mode_RAMP(void)
+{
+#if 0
+// Old sweep stuff kept around for debugging.
+#define TICKS_FOR_ONE_DIR 125
+#define LOWER_SWEEP 0
+#define UPPER_SWEEP 255
+static uint16_t sweep = LOWER_SWEEP;
+#endif
+#if 0
+	if (++sweep == UPPER_SWEEP)
+	{
+		sweep = LOWER_SWEEP;
+	}
+#endif
+#if 0
+#  if defined(ADC_X) && !defined(ADC_Y)
+	rawXVal = read_X();
+	rawYVal = sweep;
+	setup_X();
+#  endif
+#  if !defined(ADC_X) && defined(ADC_Y)
+	rawXVal = sweep;
+	rawYVal = read_Y();
+	setup_Y();
+#  endif
+#endif
+}
+#endif
+
+#ifdef TS_BULLSEYE
+static void mode_BULLSEYE(void)
+{
+}
+#endif
 
 /** HID class driver callback function for the creation of HID reports to the host.
  *
@@ -445,9 +470,20 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 
 	switch (currentMode)
 	{
+#ifdef TS_NORMAL
 		case eNormal:
 			*ReportSize = mode_NORMAL(TSReport, &rawVal);
 			break;
+#endif
+#ifdef TS_RAMP
+		case eRamp:
+			break;
+#endif
+
+#ifdef TS_BULLSEYE
+		case eBullseye:
+			break;
+#endif
 	}
 
 	return false;
