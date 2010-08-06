@@ -332,7 +332,7 @@ typedef enum {
 	eNormal,
 } ModeType;
 
-static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport, Coords *rawVal)
+static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport, const Coords * const rawVal)
 {
 	static Coords mappedVal;
 	static Coords finalVal;
@@ -355,14 +355,17 @@ static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport, Coords *rawV
 #  endif
 #endif
 
+	// We can't change the raw value (see readXY())
+	// so take a copy and change that.
 	mappedVal = *rawVal;
 	map(&mappedVal);
 
 	// Check for pen up/pen down state
 	StateType thisState = inBox(&mappedVal) ? eDown : eUp;
 
-	// If we're in the down state, let's use these values.
-	// (If we're up, the old values don't get overwritten)
+	// If we're in the down state, let's use these values, and keep them
+	// for when we're up.  If we're up, use the last known good values
+	// from when we were down.
 	if (thisState == eDown)
 	{
 		finalVal = mappedVal;
