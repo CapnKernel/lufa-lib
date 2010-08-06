@@ -32,12 +32,31 @@
  *
  *  Main source file for the Mouse demo. This file contains the main tasks of
  *  the demo and is responsible for the initial application hardware configuration.
+ *
+ * pin 1 on TS is closest to corner
+ *  ts         T         X Y
+ *  pin 1 top  PF0  ADC0 - 5    
+ *  pin 2 rite PF1  ADC1 0 -
+ *  pin 3 bott PF4  ADC4 A 0
+ *  pin 4 left PF5  ADC5 5 A 
  */
+
+#include <LUFA/Drivers/Peripheral/ADC.h>
 
 #include "Mouse.h"
 
+// If the reading is past this, it's likely to be a pen-up condition.
+#define AXIS_MAX 950
+
+typedef struct
+{
+	uint8_t Button; /**< Button mask for pen-down indication */
+	uint16_t  X; /**< Current absolute X position of pen press */
+	uint16_t  Y; /**< Current absolute Y position of pen press */
+} USB_TouchscreenReport_Data_t;
+
 /** Buffer to hold the previously generated Mouse HID report, for comparison purposes inside the HID class driver. */
-uint8_t PrevMouseHIDReportBuffer[sizeof(USB_MouseReport_Data_t)];
+uint8_t PrevMouseHIDReportBuffer[sizeof(USB_TouchscreenReport_Data_t)];
 
 /** LUFA HID Class driver interface configuration and state information. This structure is
  *  passed to all HID Class driver functions, so that multiple instances of the same class
@@ -85,11 +104,18 @@ void SetupHardware(void)
 	/* Disable clock division */
 	clock_prescale_set(clock_div_1);
 
+	ADC_Init(ADC_SINGLE_CONVERSION | ADC_PRESCALE_32);
+
 	/* Hardware Initialization */
-	Joystick_Init();
 	LEDs_Init();
-	Buttons_Init();
 	USB_Init();
+
+#if 0
+	// PB4 and PB6 are outputs connected to LEDs
+	DDRB |= _BV(DDB4) | _BV(DDB6);
+	PORTB &= ~_BV(PB4);
+	PORTB |= _BV(PB6);
+#endif
 }
 
 /** Event handler for the library USB WakeUp event. */
@@ -127,6 +153,87 @@ void EVENT_USB_Device_StartOfFrame(void)
 	HID_Device_MillisecondElapsed(&Mouse_HID_Interface);
 }
 
+static void setup_X(void)
+{
+	ADC_SetupChannel(4);
+
+	// PF5 (left) and PF1 (right) are outputs
+	DDRF |= _BV(DDF1) | _BV(DDF5);
+	PORTF |= _BV(PF1); // set bit (hi)
+	PORTF &= ~_BV(PF5); // clear bit (lo)
+
+	// Let's make PF0 an input, but with a pull-up.
+	DDRF &= ~_BV(DDF0);
+	PORTF |= _BV(PF0);
+}
+
+static void setup_Y(void)
+{
+	ADC_SetupChannel(5);
+
+	// PF0 (top) and PF4 (bottom) are outputs
+	DDRF |= _BV(DDF0) | _BV(DDF4);
+	PORTF &= ~_BV(PF0); // clear bit (lo)
+	PORTF |= _BV(PF4); // set bit (hi)
+
+	// Let's make PF1 an input, but with a pull-up.
+	DDRF &= ~_BV(DDF1);
+	PORTF |= _BV(PF1);
+}
+
+static int read_X(void)
+{
+	return ADC_GetChannelReading(4 | ADC_REFERENCE_AVCC | ADC_RIGHT_ADJUSTED);
+}
+
+static int read_Y(void)
+{
+	return ADC_GetChannelReading(5 | ADC_REFERENCE_AVCC | ADC_RIGHT_ADJUSTED);
+}
+
+static int mapX(const int x)
+{
+	return x;
+}
+
+static int mapY(const int y)
+{
+	return y;
+}
+
+static bool inBox(const int xVal, const int yVal)
+{
+  return xVal > 0 && xVal < AXIS_MAX && yVal > 0 && yVal < AXIS_MAX;
+}
+
+typedef enum {
+	eX = 0,
+	eY = 1,
+} WhichAxisType;
+
+static WhichAxisType xymode = 0;
+#if 0
+#define TICKS_FOR_ONE_DIR 125
+#define LOWER_SWEEP 0
+#define UPPER_SWEEP 255
+static uint16_t sweep = LOWER_SWEEP;
+#endif
+
+static int rawXVal = 0;
+static int mappedXVal;
+static int finalXVal;
+
+static int rawYVal = 0;
+static int mappedYVal;
+static int finalYVal;
+
+typedef enum {
+	eUp = 0,
+	eDown = 1,
+} State;
+
+static State prevState = eUp;
+
 /** HID class driver callback function for the creation of HID reports to the host.
  *
  *  \param[in] HIDInterfaceInfo  Pointer to the HID class interface configuration structure being referenced
@@ -140,29 +247,74 @@ void EVENT_USB_Device_StartOfFrame(void)
 bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo, uint8_t* const ReportID,
                                          const uint8_t ReportType, void* ReportData, uint16_t* ReportSize)
 {
-	USB_MouseReport_Data_t* MouseReport = (USB_MouseReport_Data_t*)ReportData;
-		
-	uint8_t JoyStatus_LCL    = Joystick_GetStatus();
-	uint8_t ButtonStatus_LCL = Buttons_GetStatus();
+	USB_TouchscreenReport_Data_t* TSReport = (USB_TouchscreenReport_Data_t *)ReportData;
 
-	if (JoyStatus_LCL & JOY_UP)
-	  MouseReport->Y = -1;
-	else if (JoyStatus_LCL & JOY_DOWN)
-	  MouseReport->Y =  1;
+	// Touchscreen
+	if (xymode == eX)
+	{
+		rawXVal = read_X();
+		setup_Y();
+	}
+	else
+	{
+		rawYVal = read_Y();
+		setup_X();
+	}
 
-	if (JoyStatus_LCL & JOY_LEFT)
-	  MouseReport->X = -1;
-	else if (JoyStatus_LCL & JOY_RIGHT)
-	  MouseReport->X =  1;
+	xymode = xymode == eX ? eY : eX;
+#if 0
+	if (++sweep == UPPER_SWEEP)
+	{
+		sweep = LOWER_SWEEP;
+	}
 
-	if (JoyStatus_LCL & JOY_PRESS)
-	  MouseReport->Button |= (1 << 0);
-	  
-	if (ButtonStatus_LCL & BUTTONS_BUTTON1)
-	  MouseReport->Button |= (1 << 1);
-	
-	*ReportSize = sizeof(USB_MouseReport_Data_t);
-	return true;
+#  if defined(ADC_X) && !defined(ADC_Y)
+	rawXVal = read_X();
+	rawYVal = sweep;
+	setup_X();
+#  endif
+#  if !defined(ADC_X) && defined(ADC_Y)
+	rawXVal = sweep;
+	rawYVal = read_Y();
+	setup_Y();
+#  endif
+#endif
+
+	mappedXVal = mapX(rawXVal);
+	mappedYVal = mapY(rawYVal);
+
+	// Check for pen up/pen down state
+	State thisState = inBox(mappedXVal, mappedYVal) ? eDown : eUp;
+
+	// If we're in the down state, let's use these values.
+	// (If we're up, the old values don't get overwritten)
+	if (thisState == eDown)
+	{
+		finalXVal = mappedXVal;
+		finalYVal = mappedYVal;
+	}
+
+	// Pack the data into the report struct
+	TSReport->Button = thisState == eDown ? 1 : 0;
+	TSReport->X = finalXVal;
+	TSReport->Y = finalYVal;
+
+	if (prevState == thisState && thisState == eUp)
+	{
+		// if we're up now and we were up before, don't report
+		*ReportSize = 0;
+	}
+	else
+	{
+		// if we're down now, or this is the first sample taken with
+		// pen up, report it.
+		*ReportSize = sizeof(USB_TouchscreenReport_Data_t);
+	}
+
+	// Remember pen state for next time
+	prevState = thisState;
+
+	return false;
 }
 
 /** HID class driver callback function for the processing of HID reports from the host.

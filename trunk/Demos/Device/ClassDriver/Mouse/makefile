@@ -60,13 +60,13 @@
 
 
 # MCU name
-MCU = at90usb1287
+MCU = atmega32u4
 
 
 # Target board (see library "Board Types" documentation, NONE for projects not requiring
 # LUFA board drivers). If USER is selected, put custom board drivers in a directory called 
 # "Board" inside the application directory.
-BOARD  = USBKEY
+BOARD  = TEENSY
 
 
 # Processor frequency.
@@ -80,7 +80,7 @@ BOARD  = USBKEY
 #     does not *change* the processor frequency - it should merely be updated to
 #     reflect the processor speed set externally so that the code can use accurate
 #     software delays.
-F_CPU = 8000000
+F_CPU = 16000000
 
 
 # Input clock frequency.
@@ -214,7 +214,7 @@ CFLAGS += -ffunction-sections
 CFLAGS += -fno-inline-small-functions
 CFLAGS += -fpack-struct
 CFLAGS += -fshort-enums
-CFLAGS += -Wall
+CFLAGS += -Wall -Werror
 CFLAGS += -Wstrict-prototypes
 #CFLAGS += -mshort-calls
 CFLAGS += -Wundef
