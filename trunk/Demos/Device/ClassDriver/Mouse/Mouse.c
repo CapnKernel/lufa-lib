@@ -307,28 +307,16 @@ static Coords finalVal;
 typedef enum {
 	eUp = 0,
 	eDown = 1,
-} State;
+} StateType;
 
-static State prevState = eUp;
+static StateType prevState = eUp;
 
-/** HID class driver callback function for the creation of HID reports to the host.
- *
- *  \param[in]     HIDInterfaceInfo  Pointer to the HID class interface configuration structure being referenced
- *  \param[in,out] ReportID    Report ID requested by the host if non-zero, otherwise callback should set to the generated report ID
- *  \param[in]     ReportType  Type of the report to create, either REPORT_ITEM_TYPE_In or REPORT_ITEM_TYPE_Feature
- *  \param[out]    ReportData  Pointer to a buffer where the created report should be stored
- *  \param[out]    ReportSize  Number of bytes written in the report (or zero if no report is to be sent
- *
- *  \return Boolean true to force the sending of the report, false to let the library determine if it needs to be sent
- */
-bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo,
-                                         uint8_t* const ReportID,
-                                         const uint8_t ReportType,
-                                         void* ReportData,
-                                         uint16_t* const ReportSize)
+typedef enum {
+	eNormal,
+} ModeType;
+
+static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport)
 {
-	USB_TouchscreenReport_Data_t* TSReport = (USB_TouchscreenReport_Data_t *)ReportData;
-
 	// Touchscreen
 	if (xymode == eX)
 	{
@@ -364,7 +352,7 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 	map(&mappedVal);
 
 	// Check for pen up/pen down state
-	State thisState = inBox(&mappedVal) ? eDown : eUp;
+	StateType thisState = inBox(&mappedVal) ? eDown : eUp;
 
 	// If we're in the down state, let's use these values.
 	// (If we're up, the old values don't get overwritten)
@@ -378,20 +366,51 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 	TSReport->X = finalVal.x;
 	TSReport->Y = finalVal.y;
 
+	uint16_t ReportSize;
 	if (prevState == thisState && thisState == eUp)
 	{
 		// if we're up now and we were up before, don't report
-		*ReportSize = 0;
+		ReportSize = 0;
 	}
 	else
 	{
 		// if we're down now, or this is the first sample taken with
 		// pen up, report it.
-		*ReportSize = sizeof(USB_TouchscreenReport_Data_t);
+		ReportSize = sizeof(USB_TouchscreenReport_Data_t);
 	}
 
 	// Remember pen state for next time
 	prevState = thisState;
+
+	return ReportSize;
+}
+
+/** HID class driver callback function for the creation of HID reports to the host.
+ *
+ *  \param[in]     HIDInterfaceInfo  Pointer to the HID class interface configuration structure being referenced
+ *  \param[in,out] ReportID    Report ID requested by the host if non-zero, otherwise callback should set to the generated report ID
+ *  \param[in]     ReportType  Type of the report to create, either REPORT_ITEM_TYPE_In or REPORT_ITEM_TYPE_Feature
+ *  \param[out]    ReportData  Pointer to a buffer where the created report should be stored
+ *  \param[out]    ReportSize  Number of bytes written in the report (or zero if no report is to be sent
+ *
+ *  \return Boolean true to force the sending of the report, false to let the library determine if it needs to be sent
+ */
+bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDInterfaceInfo,
+                                         uint8_t* const ReportID,
+                                         const uint8_t ReportType,
+                                         void* ReportData,
+                                         uint16_t* const ReportSize)
+{
+	USB_TouchscreenReport_Data_t* TSReport = (USB_TouchscreenReport_Data_t *)ReportData;
+
+	static ModeType currentMode = eNormal;
+
+	switch (currentMode)
+	{
+		case eNormal:
+			*ReportSize = mode_NORMAL(TSReport);
+			break;
+	}
 
 	return false;
 }
