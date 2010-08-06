@@ -271,6 +271,7 @@ static int read_Y(void)
 }
 
 #if 0
+// Old sweep stuff kept around for debugging.
 #  if defined(ADC_X) && !defined(ADC_Y)
 	rawXVal = read_X();
 	rawYVal = sweep;
@@ -282,6 +283,17 @@ static int read_Y(void)
 	setup_Y();
 #  endif
 #endif
+#if 0
+#define TICKS_FOR_ONE_DIR 125
+#define LOWER_SWEEP 0
+#define UPPER_SWEEP 255
+static uint16_t sweep = LOWER_SWEEP;
+#endif
+#if 0
+	if (++sweep == UPPER_SWEEP)
+	{
+		sweep = LOWER_SWEEP;
+	}
 #endif
 
 // Return values for X and Y.  (Since we can't read both quickly, we cheat
@@ -330,13 +342,6 @@ static bool inBox(Coords *c)
 }
 #endif
 
-#if 0
-#define TICKS_FOR_ONE_DIR 125
-#define LOWER_SWEEP 0
-#define UPPER_SWEEP 255
-static uint16_t sweep = LOWER_SWEEP;
-#endif
-
 typedef enum {
 	eUp = 0,
 	eDown = 1,
@@ -352,12 +357,6 @@ static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport, const Coords
 {
 	static Coords mappedVal;
 	static Coords lastGood;
-
-#if 0
-	if (++sweep == UPPER_SWEEP)
-	{
-		sweep = LOWER_SWEEP;
-	}
 
 	// We can't change the raw value (see readXY())
 	// so take a copy and change that.
