@@ -270,6 +270,22 @@ static int read_Y(void)
 	return ADC_GetChannelReading(5 | ADC_REFERENCE_AVCC | ADC_RIGHT_ADJUSTED);
 }
 
+#if 0
+#  if defined(ADC_X) && !defined(ADC_Y)
+	rawXVal = read_X();
+	rawYVal = sweep;
+	setup_X();
+#  endif
+#  if !defined(ADC_X) && defined(ADC_Y)
+	rawXVal = sweep;
+	rawYVal = read_Y();
+	setup_Y();
+#  endif
+#endif
+#endif
+
+// Return values for X and Y.  (Since we can't read both quickly, we cheat
+// by only updating one axis.  The function alternates between axes
 static void read_XY(Coords *c)
 {
 	typedef enum {
@@ -343,25 +359,30 @@ static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport, const Coords
 		sweep = LOWER_SWEEP;
 	}
 
-#  if defined(ADC_X) && !defined(ADC_Y)
-	rawXVal = read_X();
-	rawYVal = sweep;
-	setup_X();
-#  endif
-#  if !defined(ADC_X) && defined(ADC_Y)
-	rawXVal = sweep;
-	rawYVal = read_Y();
-	setup_Y();
-#  endif
-#endif
-
 	// We can't change the raw value (see readXY())
 	// so take a copy and change that.
 	mappedVal = *rawVal;
 	map(&mappedVal);
 
+#ifdef CONFIG_BUTTON_DOWN
+	// Check for button up/button down state
+	StateType thisState = button_down() ? eDown : eUp;
+#elif defined(CONFIG_PEN_DOWN)
 	// Check for pen up/pen down state
 	StateType thisState = inBox(&mappedVal) ? eDown : eUp;
+#endif
+
+#ifdef CONFIG_LED_SHOWS_DOWN
+	if (thisState == eDown)
+	{
+		LED_ON;
+	}
+	else
+	{
+		LED_OFF;
+	}
+#endif
+
 	TSReport->Button = thisState == eDown ? 1 : 0;
 
 	// If we're in the down state, let's use these values, and keep them
