@@ -7,8 +7,10 @@
 //#define CONFIG_BUTTON
 //#define CONFIG_TIMER
 
-// If the reading is past this, it's likely to be a pen-up condition.
-#define AXIS_MAX 950
+// If an axis reading is outside this range,
+// it's likely to be a pen-up condition.
+#define AXIS_MAX 1023
+#define AXIS_MIN 0
 
 #ifdef CONFIG_BUTTON
 // Set PB6 for input, with pullup enabled
@@ -268,6 +270,29 @@ static int read_Y(void)
 	return ADC_GetChannelReading(5 | ADC_REFERENCE_AVCC | ADC_RIGHT_ADJUSTED);
 }
 
+static void read_XY(Coords *c)
+{
+	typedef enum {
+		eX = 0,
+		eY = 1,
+	} WhichAxisType;
+
+	static WhichAxisType xymode = eX;
+	// Touchscreen
+	if (xymode == eX)
+	{
+		c->x = read_X();
+		setup_Y();
+	}
+	else
+	{
+		c->y = read_Y();
+		setup_X();
+	}
+
+	xymode = xymode == eX ? eY : eX;
+}
+
 // Map ADC readings (0-1023 but usually well within this, eg, 220-905)
 // into logical 0-1023.
 static void map(Coords *c)
@@ -287,12 +312,6 @@ static bool inBox(Coords *c)
  	return c->x >= 0 && c->x <= AXIS_MAX && c->y >= 0 && c->y <= AXIS_MAX;
 }
 
-typedef enum {
-	eX = 0,
-	eY = 1,
-} WhichAxisType;
-
-static WhichAxisType xymode = 0;
 #if 0
 #define TICKS_FOR_ONE_DIR 125
 #define LOWER_SWEEP 0
@@ -316,19 +335,9 @@ static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport, Coords *rawV
 	static Coords mappedVal;
 	static Coords finalVal;
 
-	// Touchscreen
-	if (xymode == eX)
-	{
-		rawVal->x = read_X();
-		setup_Y();
-	}
-	else
-	{
-		rawVal->y = read_Y();
-		setup_X();
-	}
 
-	xymode = xymode == eX ? eY : eX;
+	read_XY(rawVal);
+
 #if 0
 	if (++sweep == UPPER_SWEEP)
 	{
