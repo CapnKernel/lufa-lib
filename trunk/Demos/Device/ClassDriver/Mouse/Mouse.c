@@ -284,6 +284,7 @@ static void read_XY(Coords *c)
 	} WhichAxisType;
 
 	static WhichAxisType xymode = eX;
+
 	// Touchscreen
 	if (xymode == eX)
 	{
@@ -315,8 +316,7 @@ static void map(Coords *c)
 #ifdef CONFIG_PEN_DOWN
 static bool inBox(Coords *c)
 {
-	// The magic value of 9999 will be regarded as out-of-box
- 	return c->x >= 0 && c->x <= AXIS_MAX && c->y >= 0 && c->y <= AXIS_MAX;
+	return c->x >= 0 && c->x <= AXIS_MAX && c->y >= 0 && c->y <= AXIS_MAX;
 }
 #endif
 
