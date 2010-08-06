@@ -1,4 +1,3 @@
-#define CONFIG_AXIS_ALTERNATE
 #define CONFIG_PEN_DOWN
 //#define CONFIG_BUTTON_DOWN
 //#define CONFIG_LED
@@ -92,6 +91,12 @@ static unsigned int button_down(void)
 	return BUTTON_DOWN;
 }
 #endif
+
+typedef struct
+{
+	int16_t x;
+	int16_t y;
+} Coords;
 
 typedef struct
 {
@@ -291,13 +296,9 @@ static WhichAxisType xymode = 0;
 static uint16_t sweep = LOWER_SWEEP;
 #endif
 
-static int rawXVal = 0;
-static int mappedXVal;
-static int finalXVal;
-
-static int rawYVal = 0;
-static int mappedYVal;
-static int finalYVal;
+static Coords rawVal = {0, 0};
+static Coords mappedVal;
+static Coords finalVal;
 
 typedef enum {
 	eUp = 0,
@@ -327,12 +328,12 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 	// Touchscreen
 	if (xymode == eX)
 	{
-		rawXVal = read_X();
+		rawVal.x = read_X();
 		setup_Y();
 	}
 	else
 	{
-		rawYVal = read_Y();
+		rawVal.y = read_Y();
 		setup_X();
 	}
 
@@ -355,24 +356,23 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 #  endif
 #endif
 
-	mappedXVal = mapX(rawXVal);
-	mappedYVal = mapY(rawYVal);
+	mappedVal.x = mapX(rawVal.x);
+	mappedVal.y = mapY(rawVal.y);
 
 	// Check for pen up/pen down state
-	State thisState = inBox(mappedXVal, mappedYVal) ? eDown : eUp;
+	State thisState = inBox(mappedVal.x, mappedVal.y) ? eDown : eUp;
 
 	// If we're in the down state, let's use these values.
 	// (If we're up, the old values don't get overwritten)
 	if (thisState == eDown)
 	{
-		finalXVal = mappedXVal;
-		finalYVal = mappedYVal;
+		finalVal = mappedVal;
 	}
 
 	// Pack the data into the report struct
 	TSReport->Button = thisState == eDown ? 1 : 0;
-	TSReport->X = finalXVal;
-	TSReport->Y = finalYVal;
+	TSReport->X = finalVal.x;
+	TSReport->Y = finalVal.y;
 
 	if (prevState == thisState && thisState == eUp)
 	{
