@@ -1,11 +1,10 @@
 #define CONFIG_PEN_DOWN
+//#define CONFIG_BUTTON
 //#define CONFIG_BUTTON_DOWN
 //#define CONFIG_LED
 //#define CONFIG_LED_SHOWS_DOWN
 //#define CONFIG_TIMER
 //#define CONFIG_LED_SHOWS_TIMER
-//#define CONFIG_BUTTON
-//#define CONFIG_TIMER
 
 #define TS_NORMAL
 // #define TS_RAMP
@@ -141,28 +140,23 @@ int main(void)
 	SetupHardware();
 	
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
-	sei();
-
 #ifdef CONFIG_TIMER
 	TCNT1 = 0;
+	TCCR1B |= (1 << WGM12); // Configure timer 1 for CTC mode 
+	OCR1A |= 20000;
 	TCCR1B |= ((1 << CS10) | (1 << CS11)); // Set up timer at Fcpu/64 
 #endif
+
+	sei();
 
 	for (;;)
 	{
 #ifdef CONFIG_TIMER
-#if 0
-		LED_ON;
-		_delay_ms(500);
-		LED_OFF;
-		_delay_ms(500);
-#else
-		if (TCNT1 >= 10000)
+		if (TIFR1 & (1 << OCF1A))
 		{
 			LED_TOGGLE;
-			TCNT1 = 0;
+			TIFR1 = (1 << OCF1A); // clear the CTC flag (writing a logic one to the set flag clears it) 
 		}
-#endif
 #endif
 
 		HID_Device_USBTask(&Mouse_HID_Interface);
@@ -356,6 +350,8 @@ static uint16_t mode_NORMAL(USB_TouchscreenReport_Data_t *TSReport, const Coords
 #elif defined(CONFIG_PEN_DOWN)
 	// Check for pen up/pen down state
 	StateType thisState = inBox(&mappedVal) ? eDown : eUp;
+#else
+	StateType thisState = eUp;
 #endif
 
 #ifdef CONFIG_LED_SHOWS_DOWN
