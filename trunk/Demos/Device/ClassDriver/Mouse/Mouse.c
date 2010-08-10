@@ -1,10 +1,20 @@
 #define CONFIG_PEN_DOWN
-//#define CONFIG_BUTTON
 //#define CONFIG_BUTTON_DOWN
-//#define CONFIG_LED
+
 //#define CONFIG_LED_SHOWS_DOWN
-//#define CONFIG_TIMER
-//#define CONFIG_LED_SHOWS_TIMER
+#define CONFIG_LED_SHOWS_TIMER
+
+#ifdef CONFIG_BUTTON_DOWN
+#  define CONFIG_BUTTON
+#endif
+
+#if defined(CONFIG_LED_SHOWS_TIMER) || defined(CONFIG_LED_SHOWS_DOWN)
+#  define CONFIG_LED
+#endif
+
+#ifdef CONFIG_LED_SHOWS_TIMER
+#  define CONFIG_TIMER
+#endif
 
 #define TS_NORMAL
 // #define TS_RAMP
@@ -145,24 +155,24 @@ int main(void)
 	TCCR1B |= (1 << WGM12); // Configure timer 1 for CTC mode 
 	OCR1A |= 20000;
 	TCCR1B |= ((1 << CS10) | (1 << CS11)); // Set up timer at Fcpu/64 
+	TIMSK1 |= (1 << OCIE1A); // Enable CTC interrupt
 #endif
 
 	sei();
 
 	for (;;)
 	{
-#ifdef CONFIG_TIMER
-		if (TIFR1 & (1 << OCF1A))
-		{
-			LED_TOGGLE;
-			TIFR1 = (1 << OCF1A); // clear the CTC flag (writing a logic one to the set flag clears it) 
-		}
-#endif
-
 		HID_Device_USBTask(&Mouse_HID_Interface);
 		USB_USBTask();
 	}
 }
+
+#ifdef CONFIG_TIMER
+ISR(TIMER1_COMPA_vect)
+{
+			LED_TOGGLE;
+}
+#endif
 
 /** Configures the board hardware and chip peripherals for the demo's functionality. */
 void SetupHardware(void)
