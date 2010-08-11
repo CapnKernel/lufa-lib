@@ -142,6 +142,40 @@ USB_ClassInfo_HID_Device_t Mouse_HID_Interface =
 			},
 	};
 
+#ifdef CONFIG_TIMER
+typedef void (*NoArgsFn_t)(void);
+
+typedef struct {
+	NoArgsFn_t handler;
+	unsigned int delay_until_next;
+} ReadTSStateHandler_t;
+
+static void Default_Handler(void)
+{
+	LED_TOGGLE;
+}
+
+static int ReadTSState = 0;
+
+static ReadTSStateHandler_t ReadTSStates[] = {
+	{Default_Handler, 40000}, // Off time
+	{Default_Handler, 40000}, // On time
+	{Default_Handler, 60000}, // Off time
+	{Default_Handler, 20000}  // On time
+};
+
+ISR(TIMER1_COMPA_vect)
+{
+	NoArgsFn_t handler = ReadTSStates[ReadTSState].handler;
+	handler();
+	if (++ReadTSState == sizeof(ReadTSStates)/sizeof(ReadTSStates[0]))
+		ReadTSState = 0;
+	// TODO: Enable
+	OCR1A = ReadTSStates[ReadTSState].delay_until_next;
+	// TODO: Kick off timer interrupt again
+}
+#endif
+
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
  */
@@ -153,7 +187,7 @@ int main(void)
 #ifdef CONFIG_TIMER
 	TCNT1 = 0;
 	TCCR1B |= (1 << WGM12); // Configure timer 1 for CTC mode 
-	OCR1A |= 20000;
+	OCR1A = 20000;
 	TCCR1B |= ((1 << CS10) | (1 << CS11)); // Set up timer at Fcpu/64 
 	TIMSK1 |= (1 << OCIE1A); // Enable CTC interrupt
 #endif
@@ -166,13 +200,6 @@ int main(void)
 		USB_USBTask();
 	}
 }
-
-#ifdef CONFIG_TIMER
-ISR(TIMER1_COMPA_vect)
-{
-			LED_TOGGLE;
-}
-#endif
 
 /** Configures the board hardware and chip peripherals for the demo's functionality. */
 void SetupHardware(void)
