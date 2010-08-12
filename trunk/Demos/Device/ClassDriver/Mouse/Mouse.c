@@ -40,10 +40,6 @@
 #define LED_TOGGLE  (PORTD ^= _BV(PD6))
 #endif
 
-#ifdef CONFIG_TIMER
-#define TIMER_CONFIG do {} while(0)
-#endif
-
 /*
              LUFA Library
      Copyright (C) Dean Camera, 2010.
@@ -141,40 +137,6 @@ USB_ClassInfo_HID_Device_t Mouse_HID_Interface =
 				.PrevReportINBufferSize       = sizeof(PrevMouseHIDReportBuffer),
 			},
 	};
-
-#ifdef CONFIG_TIMER
-typedef void (*NoArgsFn_t)(void);
-
-typedef struct {
-	NoArgsFn_t handler;
-	unsigned int delay_until_next;
-} ReadTSStateHandler_t;
-
-static void Default_Handler(void)
-{
-	LED_TOGGLE;
-}
-
-static int ReadTSState = 0;
-
-static ReadTSStateHandler_t ReadTSStates[] = {
-	{Default_Handler, 40000}, // Off time
-	{Default_Handler, 40000}, // On time
-	{Default_Handler, 60000}, // Off time
-	{Default_Handler, 20000}  // On time
-};
-
-ISR(TIMER1_COMPA_vect)
-{
-	NoArgsFn_t handler = ReadTSStates[ReadTSState].handler;
-	handler();
-	if (++ReadTSState == sizeof(ReadTSStates)/sizeof(ReadTSStates[0]))
-		ReadTSState = 0;
-	// TODO: Enable
-	OCR1A = ReadTSStates[ReadTSState].delay_until_next;
-	// TODO: Kick off timer interrupt again
-}
-#endif
 
 /** Main program entry point. This routine contains the overall program flow, including initial
  *  setup of all components and the main program loop.
@@ -538,3 +500,39 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 {
 	// Unused (but mandatory for the HID class driver) in this demo, since there are no Host->Device reports
 }
+
+#ifdef CONFIG_TIMER
+typedef void (*NoArgsFn_t)(void);
+
+typedef struct {
+	NoArgsFn_t handler;
+	unsigned int delay_until_next;
+} ReadTSStateHandler_t;
+
+static void Default_Handler(void)
+{
+	LED_TOGGLE;
+}
+
+static int ReadTSState = 0;
+
+static ReadTSStateHandler_t ReadTSStates[] = {
+	{Default_Handler, 40000}, // Off time
+	{Default_Handler, 40000}, // On time
+	{Default_Handler, 60000}, // Off time
+	{Default_Handler, 20000}  // On time
+};
+
+ISR(TIMER1_COMPA_vect)
+{
+	NoArgsFn_t handler = ReadTSStates[ReadTSState].handler;
+	handler();
+	if (++ReadTSState == sizeof(ReadTSStates)/sizeof(ReadTSStates[0]))
+		ReadTSState = 0;
+	// TODO: Enable
+	OCR1A = ReadTSStates[ReadTSState].delay_until_next;
+	// TODO: Kick off timer interrupt again
+}
+#endif
+
+
