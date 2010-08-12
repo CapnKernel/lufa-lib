@@ -118,22 +118,18 @@ void EVENT_USB_Device_Disconnect(void)
  */
 void EVENT_USB_Device_ConfigurationChanged(void)
 {
-	LEDs_SetAllLEDs(LEDMASK_USB_READY);
+	bool ConfigSuccess = true;
 
-	/* Setup TMC In and Out Endpoints */
-	if (!(Endpoint_ConfigureEndpoint(TMC_IN_EPNUM, EP_TYPE_BULK,
-		                             ENDPOINT_DIR_IN, TMC_IO_EPSIZE,
-	                                 ENDPOINT_BANK_SINGLE)))
-	{
-		LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
-	}
+	/* Setup TMC In, Out and Notification Endpoints */
+	ConfigSuccess &= Endpoint_ConfigureEndpoint(TMC_IN_EPNUM,  EP_TYPE_BULK, ENDPOINT_DIR_IN,
+	                                            TMC_IO_EPSIZE, ENDPOINT_BANK_SINGLE);
+	ConfigSuccess &= Endpoint_ConfigureEndpoint(TMC_OUT_EPNUM, EP_TYPE_BULK, ENDPOINT_DIR_OUT,
+	                                            TMC_IO_EPSIZE, ENDPOINT_BANK_SINGLE);
+	ConfigSuccess &= Endpoint_ConfigureEndpoint(TMC_NOTIFICATION_EPNUM, EP_TYPE_INTERRUPT, ENDPOINT_DIR_IN,
+	                                            TMC_IO_EPSIZE, ENDPOINT_BANK_SINGLE);
 
-	if (!(Endpoint_ConfigureEndpoint(TMC_OUT_EPNUM, EP_TYPE_BULK,
-		                             ENDPOINT_DIR_OUT, TMC_IO_EPSIZE,
-	                                 ENDPOINT_BANK_SINGLE)))
-	{
-		LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
-	}
+	/* Indicate endpoint configuration success or failure */
+	LEDs_SetAllLEDs(ConfigSuccess ? LEDMASK_USB_READY : LEDMASK_USB_ERROR);
 }
 
 /** Event handler for the USB_UnhandledControlRequest event. This is used to catch standard and class specific
@@ -332,7 +328,7 @@ void TMC_Task(void)
 	
 	TMC_MessageHeader_t MessageHeader;
 	
-	/* Check if a TMC packet has been received */
+	/* Try to read in a TMC message from the interface, process if one is available */
 	if (ReadTMCHeader(&MessageHeader))
 	{
 		/* Indicate busy */
@@ -366,6 +362,12 @@ void TMC_Task(void)
 	IsTMCBulkOUTReset = false;
 }
 
+/** Attempts to read in the TMC message header from the TMC interface.
+ *
+ *  \param[out] MessageHeader  Pointer to a location where the read header (if any) should be stored
+ *
+ *  \return Boolean true if a header was read, false otherwise
+ */
 bool ReadTMCHeader(TMC_MessageHeader_t* const MessageHeader)
 {
 	/* Select the Data Out endpoint */
@@ -382,7 +384,7 @@ bool ReadTMCHeader(TMC_MessageHeader_t* const MessageHeader)
 	CurrentTransferTag = MessageHeader->Tag;
 	
 	/* Indicate if the command has been aborted or not */
-	return !IsTMCBulkOUTReset;
+	return !(IsTMCBulkOUTReset);
 }
 
 bool WriteTMCHeader(TMC_MessageHeader_t* const MessageHeader)
@@ -402,7 +404,7 @@ bool WriteTMCHeader(TMC_MessageHeader_t* const MessageHeader)
 	Endpoint_Write_Stream_LE(MessageHeader, sizeof(TMC_MessageHeader_t), StreamCallback_AbortINOnRequest);
 
 	/* Indicate if the command has been aborted or not */
-	return !IsTMCBulkINReset;
+	return !(IsTMCBulkINReset);
 }
 
 /** Stream callback function for the Endpoint stream write functions. This callback will abort the current stream transfer
