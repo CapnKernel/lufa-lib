@@ -1,26 +1,32 @@
+// TODO: Implement a median filter.
+#define TS
+#define MAPPER
+// 32 bounces a little
+// 128 is mostly ok.  worst test case: dotting
+// 128 gives around 7-8 coords per USB period
+#define TASK_TIME 128
+// #define SWEEP
+
+// How do we generate a "pen down" event?  From the pen or the button?
 #define CONFIG_PEN_DOWN
 //#define CONFIG_BUTTON_DOWN
 
+// Does the LED show the button-down status?
 //#define CONFIG_LED_SHOWS_DOWN
-#define CONFIG_LED_SHOWS_TIMER
 
 #ifdef CONFIG_BUTTON_DOWN
 #  define CONFIG_BUTTON
 #endif
 
-#if defined(CONFIG_LED_SHOWS_TIMER) || defined(CONFIG_LED_SHOWS_DOWN)
+#if defined(CONFIG_LED_SHOWS_DOWN)
 #  define CONFIG_LED
-#endif
-
-#ifdef CONFIG_LED_SHOWS_TIMER
-#  define CONFIG_TIMER
 #endif
 
 #define TS_NORMAL
 // #define TS_RAMP
 // #define TS_BULLSEYE
 
-// If an axis reading is outside this range,
+// If, after mapping, an axis reading is outside this range,
 // it's likely to be a pen-up condition.
 #define AXIS_MAX 1023
 #define AXIS_MIN 0
@@ -146,13 +152,6 @@ int main(void)
 	SetupHardware();
 	
 	LEDs_SetAllLEDs(LEDMASK_USB_NOTREADY);
-#ifdef CONFIG_TIMER
-	TCNT1 = 0;
-	TCCR1B |= (1 << WGM12); // Configure timer 1 for CTC mode 
-	OCR1A = 20000;
-	TCCR1B |= ((1 << CS10) | (1 << CS11)); // Set up timer at Fcpu/64 
-	TIMSK1 |= (1 << OCIE1A); // Enable CTC interrupt
-#endif
 
 	sei();
 
@@ -188,6 +187,14 @@ void SetupHardware(void)
 #ifdef CONFIG_BUTTON
 	button_config();
 #endif
+
+	// Set up timer
+	TCNT1 = 0;
+	TCCR1B |= (1 << WGM12); // Configure timer 1 for CTC mode 
+	OCR1A = 20000;
+	TCCR1B |= ((1 << CS10) | (1 << CS11)); // Set up timer at Fcpu/64 
+	// TODO: Put timer into one-shot mode so it doesn't auto-repeat
+	TIMSK1 |= (1 << OCIE1A); // Enable CTC interrupt
 }
 
 /** Event handler for the library USB WakeUp event. */
@@ -226,78 +233,53 @@ void EVENT_USB_Device_StartOfFrame(void)
 	HID_Device_MillisecondElapsed(&Mouse_HID_Interface);
 }
 
-static void setup_X(void)
+// How many samples are waiting to be picked up.
+// Could be zero, could be one, could be more than one.
+static volatile uint8_t samplesReady = 0;
+static Coords theSample;
+
+// Return values for X and Y, by atomically retrieving
+// the sample storage location from the timer interrupt.
+static bool read_XY(Coords *c)
 {
-	ADC_SetupChannel(4);
-
-	// PF5 (left) and PF1 (right) are outputs
-	DDRF |= _BV(DDF1) | _BV(DDF5);
-	PORTF |= _BV(PF1); // set bit (hi)
-	PORTF &= ~_BV(PF5); // clear bit (lo)
-
-	// Let's make PF0 an input, but with a pull-up.
-	// Coordinate reading without pulling other side
-	// high makes readings much worse.
-	DDRF &= ~_BV(DDF0);
-	PORTF |= _BV(PF0);
-}
-
-static void setup_Y(void)
-{
-	ADC_SetupChannel(5);
-
-	// PF0 (top) and PF4 (bottom) are outputs
-	DDRF |= _BV(DDF0) | _BV(DDF4);
-	PORTF &= ~_BV(PF0); // clear bit (lo)
-	PORTF |= _BV(PF4); // set bit (hi)
-
-	// Let's make PF1 an input, but with a pull-up.
-	// Coordinate reading without pulling other side
-	// high makes readings much worse.
-	DDRF &= ~_BV(DDF1);
-	PORTF |= _BV(PF1);
-}
-
-static int read_X(void)
-{
-	return ADC_GetChannelReading(4 | ADC_REFERENCE_AVCC | ADC_RIGHT_ADJUSTED);
-}
-
-static int read_Y(void)
-{
-	return ADC_GetChannelReading(5 | ADC_REFERENCE_AVCC | ADC_RIGHT_ADJUSTED);
-}
-
-// Return values for X and Y.  (Since we can't read both quickly, we cheat
-// by only updating one axis.  The function alternates between axes
-static void read_XY(Coords *c)
-{
-	typedef enum {
-		eX = 0,
-		eY = 1,
-	} WhichAxisType;
-
-	static WhichAxisType xymode = eX;
-
-	// Touchscreen
-	if (xymode == eX)
+#ifdef SWEEP
+#define LOWER_SWEEP 0
+#define UPPER_SWEEP 119
+	static uint16_t sweep = LOWER_SWEEP;
+#endif
+	register bool ret;
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
 	{
-		c->x = read_X();
-		setup_Y();
-	}
-	else
-	{
-		c->y = read_Y();
-		setup_X();
+#ifndef SWEEP
+		if ((ret = samplesReady))
+		{
+			*c = theSample;
+			samplesReady = false;
+		}
+#else
+		if (++sweep >= UPPER_SWEEP)
+		{
+			sweep = LOWER_SWEEP;
+		}
+
+		ret = samplesReady > 0;
+		if (ret)
+		{
+			c->x = sweep;
+			c->y = samplesReady;
+			samplesReady = 0;
+		}
+#endif
 	}
 
-	xymode = xymode == eX ? eY : eX;
+	return ret;
 }
 
 // Map ADC readings (0-1023 but usually well within this, eg, 220-905)
 // into logical 0-1023.
 static void map(Coords *c)
 {
+#ifdef MAPPER
 	// These values come from my magic spreadsheet
 	c->x *= 25;
 	c->x >>= 4;
@@ -305,6 +287,7 @@ static void map(Coords *c)
 	c->y *= 25;
 	c->y >>= 4;
 	c->y += -364;
+#endif
 }
 
 #ifdef CONFIG_PEN_DOWN
@@ -462,7 +445,12 @@ bool CALLBACK_HID_Device_CreateHIDReport(USB_ClassInfo_HID_Device_t* const HIDIn
 
 	USB_TouchscreenReport_Data_t* TSReport = (USB_TouchscreenReport_Data_t *)ReportData;
 
-	read_XY(&rawVal);
+	bool haveASample = read_XY(&rawVal);
+	if (haveASample == false)
+	{
+		*ReportSize = 0;
+		return false;
+	}
 
 	switch (currentMode)
 	{
@@ -502,7 +490,50 @@ void CALLBACK_HID_Device_ProcessHIDReport(USB_ClassInfo_HID_Device_t* const HIDI
 	// Unused (but mandatory for the HID class driver) in this demo, since there are no Host->Device reports
 }
 
-#ifdef CONFIG_TIMER
+#ifdef TS
+static void setup_X(void)
+{
+	ADC_SetupChannel(4);
+
+	// PF5 (left) and PF1 (right) are outputs
+	DDRF |= _BV(DDF1) | _BV(DDF5);
+	PORTF |= _BV(PF1); // set bit (hi)
+	PORTF &= ~_BV(PF5); // clear bit (lo)
+
+	// Let's make PF0 an input, but with a pull-up.
+	// Coordinate reading without pulling other side
+	// high makes readings much worse.
+	DDRF &= ~_BV(DDF0);
+	PORTF |= _BV(PF0);
+}
+
+static void setup_Y(void)
+{
+	ADC_SetupChannel(5);
+
+	// PF0 (top) and PF4 (bottom) are outputs
+	DDRF |= _BV(DDF0) | _BV(DDF4);
+	PORTF &= ~_BV(PF0); // clear bit (lo)
+	PORTF |= _BV(PF4); // set bit (hi)
+
+	// Let's make PF1 an input, but with a pull-up.
+	// Coordinate reading without pulling other side
+	// high makes readings much worse.
+	DDRF &= ~_BV(DDF1);
+	PORTF |= _BV(PF1);
+}
+
+static int read_X(void)
+{
+	return ADC_GetChannelReading(4 | ADC_REFERENCE_AVCC | ADC_RIGHT_ADJUSTED);
+}
+
+static int read_Y(void)
+{
+	return ADC_GetChannelReading(5 | ADC_REFERENCE_AVCC | ADC_RIGHT_ADJUSTED);
+}
+#endif
+
 typedef void (*NoArgsFn_t)(void);
 
 typedef struct {
@@ -510,30 +541,48 @@ typedef struct {
 	unsigned int delay_until_next;
 } ReadTSStateHandler_t;
 
-static void Default_Handler(void)
+static void readXandSetupForY(void)
 {
-	LED_TOGGLE;
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+	{
+		// FIXME: This is not true atomic, as
+		// this will make x available before Y has
+		// been read.
+		theSample.x = read_X();
+	}
+	setup_Y();
+}
+
+static void readYandSetupForX(void)
+{
+	ATOMIC_BLOCK(ATOMIC_RESTORESTATE)
+	{
+		theSample.y = read_Y();
+		samplesReady++;
+		if (samplesReady > 250)
+			samplesReady = 250;
+	}
+	setup_X();
 }
 
 static int ReadTSState = 0;
 
 static ReadTSStateHandler_t ReadTSStates[] = {
-	{Default_Handler, 40000}, // Off time
-	{Default_Handler, 40000}, // On time
-	{Default_Handler, 60000}, // Off time
-	{Default_Handler, 20000}  // On time
+	{readXandSetupForY, TASK_TIME},
+	{readYandSetupForX, TASK_TIME},
 };
 
 ISR(TIMER1_COMPA_vect)
 {
-	NoArgsFn_t handler = ReadTSStates[ReadTSState].handler;
-	handler();
+	ReadTSStateHandler_t *state = &ReadTSStates[ReadTSState];
+	state->handler();
 	if (++ReadTSState == sizeof(ReadTSStates)/sizeof(ReadTSStates[0]))
 		ReadTSState = 0;
-	// TODO: Enable
-	OCR1A = ReadTSStates[ReadTSState].delay_until_next;
-	// TODO: Kick off timer interrupt again
+	// TODO: Once the code has been changed to put the timer into
+	// one-shot mode, kick off timer interrupt again
+	OCR1A = state->delay_until_next;
 }
-#endif
 
+// TODO: Start setup of other axis on ADC completion, not on timer.
+// ADC_vect 
 
