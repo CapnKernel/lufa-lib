@@ -81,18 +81,16 @@ void RNDIS_Device_ProcessControlRequest(USB_ClassInfo_RNDIS_Device_t* const RNDI
 			if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
 			{
 				Endpoint_ClearSETUP();
-
 				Endpoint_Read_Control_Stream_LE(RNDISInterfaceInfo->State.RNDISMessageBuffer, USB_ControlRequest.wLength);
-				RNDIS_Device_ProcessRNDISControlMessage(RNDISInterfaceInfo);
 				Endpoint_ClearIN();
+
+				RNDIS_Device_ProcessRNDISControlMessage(RNDISInterfaceInfo);
 			}
 			
 			break;
 		case REQ_GetEncapsulatedResponse:
 			if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
 			{
-				Endpoint_ClearSETUP();
-
 				RNDIS_Message_Header_t* MessageHeader = (RNDIS_Message_Header_t*)&RNDISInterfaceInfo->State.RNDISMessageBuffer;
 
 				if (!(MessageHeader->MessageLength))
@@ -101,6 +99,7 @@ void RNDIS_Device_ProcessControlRequest(USB_ClassInfo_RNDIS_Device_t* const RNDI
 					MessageHeader->MessageLength = 1;
 				}
 
+				Endpoint_ClearSETUP();
 				Endpoint_Write_Control_Stream_LE(RNDISInterfaceInfo->State.RNDISMessageBuffer, MessageHeader->MessageLength);				
 				Endpoint_ClearOUT();
 

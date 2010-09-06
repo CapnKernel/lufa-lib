@@ -33,7 +33,6 @@
 
 #if defined(USB_CAN_BE_HOST)
 
-#define  __INCLUDE_FROM_PIPE_C
 #include "Pipe.h"
 
 uint8_t USB_ControlPipeSize = PIPE_CONTROLPIPE_DEFAULT_SIZE;
@@ -45,17 +44,57 @@ bool Pipe_ConfigurePipe(const uint8_t Number,
                         const uint16_t Size,
                         const uint8_t Banks)
 {
-	Pipe_SelectPipe(Number);
-	Pipe_EnablePipe();
-
-	UPCFG1X = 0;
+	uint8_t UPCFG0XTemp[PIPE_TOTAL_PIPES];
+	uint8_t UPCFG1XTemp[PIPE_TOTAL_PIPES];
+	uint8_t UPCFG2XTemp[PIPE_TOTAL_PIPES];
+	uint8_t UPCONXTemp[PIPE_TOTAL_PIPES];
+	uint8_t UPINRQXTemp[PIPE_TOTAL_PIPES];
 	
-	UPCFG0X = ((Type << EPTYPE0) | Token | ((EndpointNumber & PIPE_EPNUM_MASK) << PEPNUM0));
-	UPCFG1X = ((1 << ALLOC) | Banks | Pipe_BytesToEPSizeMask(Size));
+	for (uint8_t PNum = 0; PNum < PIPE_TOTAL_PIPES; PNum++)
+	{
+		Pipe_SelectPipe(PNum);
+		UPCFG0XTemp[PNum] = UPCFG0X;
+		UPCFG1XTemp[PNum] = UPCFG1X;
+		UPCFG2XTemp[PNum] = UPCFG2X;
+		UPCONXTemp[PNum]  = UPCONX;
+		UPINRQXTemp[PNum] = UPINRQX;
+	}
+	
+	UPCFG0XTemp[Number] = ((Type << EPTYPE0) | Token | ((EndpointNumber & PIPE_EPNUM_MASK) << PEPNUM0));
+	UPCFG1XTemp[Number] = ((1 << ALLOC) | Banks | Pipe_BytesToEPSizeMask(Size));
+	UPCFG2XTemp[Number] = 0;
+	UPCONXTemp[Number]  = (1 << INMODE);
+	UPINRQXTemp[Number] = 0;
+	
+	for (uint8_t PNum = 0; PNum < PIPE_TOTAL_PIPES; PNum++)
+	{
+		Pipe_SelectPipe(PNum);
+		UPIENX  = 0;
+		UPINTX  = 0;
+		UPCFG1X = 0;
+		Pipe_DisablePipe();
+	}
 
-	Pipe_SetInfiniteINRequests();
+	for (uint8_t PNum = 0; PNum < PIPE_TOTAL_PIPES; PNum++)
+	{
+		if (!(UPCFG1XTemp[PNum] & (1 << ALLOC)))
+		  continue;
+		
+		Pipe_SelectPipe(PNum);		
+		Pipe_EnablePipe();
 
-	return Pipe_IsConfigured();
+		UPCFG0X  = UPCFG0XTemp[PNum];
+		UPCFG1X  = UPCFG1XTemp[PNum];
+		UPCFG2X  = UPCFG2XTemp[PNum];
+		UPCONX  |= UPCONXTemp[PNum];
+		UPINRQX  = UPINRQXTemp[PNum];
+
+		if (!(Pipe_IsConfigured()))
+		  return false;
+	}
+		
+	Pipe_SelectPipe(Number);	
+	return true;
 }
 
 void Pipe_ClearPipes(void)
@@ -104,6 +143,8 @@ uint8_t Pipe_WaitUntilReady(void)
 	#else
 	uint16_t TimeoutMSRem = USB_STREAM_TIMEOUT_MS;
 	#endif
+
+	uint16_t PreviousFrameNumber = USB_Host_GetFrameNumber();
 	
 	for (;;)
 	{
@@ -122,175 +163,17 @@ uint8_t Pipe_WaitUntilReady(void)
 		  return PIPE_READYWAIT_PipeStalled;
 		else if (USB_HostState == HOST_STATE_Unattached)
 		  return PIPE_READYWAIT_DeviceDisconnected;
-			  
-		if (USB_INT_HasOccurred(USB_INT_HSOFI))
+
+		uint16_t CurrentFrameNumber = USB_Host_GetFrameNumber();
+
+		if (CurrentFrameNumber != PreviousFrameNumber)
 		{
-			USB_INT_Clear(USB_INT_HSOFI);
+			PreviousFrameNumber = CurrentFrameNumber;
 
 			if (!(TimeoutMSRem--))
 			  return PIPE_READYWAIT_Timeout;
 		}
 	}
 }
-
-uint8_t Pipe_Discard_Stream(uint16_t Length
-#if !defined(NO_STREAM_CALLBACKS)
-                            , StreamCallbackPtr_t Callback
-#endif
-                            )
-{
-	uint8_t  ErrorCode;
-	
-	Pipe_SetPipeToken(PIPE_TOKEN_IN);
-
-	if ((ErrorCode = Pipe_WaitUntilReady()))
-	  return ErrorCode;
-
-	#if defined(FAST_STREAM_TRANSFERS)
-	uint8_t BytesRemToAlignment = (Pipe_BytesInPipe() & 0x07);
-
-	if (Length >= 8)
-	{
-		Length -= BytesRemToAlignment;
-
-		switch (BytesRemToAlignment)
-		{
-			default:
-				do
-				{
-					if (!(Pipe_IsReadWriteAllowed()))
-					{
-						Pipe_ClearIN();
-							
-						#if !defined(NO_STREAM_CALLBACKS)
-						if ((Callback != NULL) && (Callback() == STREAMCALLBACK_Abort))
-						  return PIPE_RWSTREAM_CallbackAborted;
-						#endif
-
-						if ((ErrorCode = Pipe_WaitUntilReady()))
-						  return ErrorCode;
-					}
-
-					Length -= 8;
-					
-					Pipe_Discard_Byte();
-			case 7: Pipe_Discard_Byte();
-			case 6: Pipe_Discard_Byte();
-			case 5: Pipe_Discard_Byte();
-			case 4: Pipe_Discard_Byte();
-			case 3: Pipe_Discard_Byte();
-			case 2: Pipe_Discard_Byte();
-			case 1:	Pipe_Discard_Byte();
-				} while (Length >= 8);	
-		}
-	}
-	#endif
-
-	while (Length)
-	{
-		if (!(Pipe_IsReadWriteAllowed()))
-		{
-			Pipe_ClearIN();
-				
-			#if !defined(NO_STREAM_CALLBACKS)
-			if ((Callback != NULL) && (Callback() == STREAMCALLBACK_Abort))
-			  return PIPE_RWSTREAM_CallbackAborted;
-			#endif
-
-			if ((ErrorCode = Pipe_WaitUntilReady()))
-			  return ErrorCode;
-		}
-		else
-		{
-			Pipe_Discard_Byte();
-			Length--;
-		}
-	}
-
-	return PIPE_RWSTREAM_NoError;
-}
-
-/* The following abuses the C preprocessor in order to copy-past common code with slight alterations,
- * so that the code needs to be written once. It is a crude form of templating to reduce code maintenance. */
-
-#define  TEMPLATE_FUNC_NAME                        Pipe_Write_Stream_LE
-#define  TEMPLATE_BUFFER_TYPE                      const void*
-#define  TEMPLATE_TOKEN                            PIPE_TOKEN_OUT
-#define  TEMPLATE_CLEAR_PIPE()                     Pipe_ClearOUT()
-#define  TEMPLATE_BUFFER_OFFSET(Length)            0
-#define  TEMPLATE_TRANSFER_BYTE(BufferPtr)         Pipe_Write_Byte(*((uint8_t*)BufferPtr++))
-#include "Template/Template_Pipe_RW.c"
-
-#define  TEMPLATE_FUNC_NAME                        Pipe_Write_PStream_LE
-#define  TEMPLATE_BUFFER_TYPE                      const void*
-#define  TEMPLATE_TOKEN                            PIPE_TOKEN_OUT
-#define  TEMPLATE_CLEAR_PIPE()                     Pipe_ClearOUT()
-#define  TEMPLATE_BUFFER_OFFSET(Length)            0
-#define  TEMPLATE_TRANSFER_BYTE(BufferPtr)         Pipe_Write_Byte(pgm_read_byte((uint8_t*)BufferPtr++))
-#include "Template/Template_Pipe_RW.c"
-
-#define  TEMPLATE_FUNC_NAME                        Pipe_Write_EStream_LE
-#define  TEMPLATE_BUFFER_TYPE                      const void*
-#define  TEMPLATE_TOKEN                            PIPE_TOKEN_OUT
-#define  TEMPLATE_CLEAR_PIPE()                     Pipe_ClearOUT()
-#define  TEMPLATE_BUFFER_OFFSET(Length)            0
-#define  TEMPLATE_TRANSFER_BYTE(BufferPtr)         Pipe_Write_Byte(eeprom_read_byte((uint8_t*)BufferPtr++))
-#include "Template/Template_Pipe_RW.c"
-
-#define  TEMPLATE_FUNC_NAME                        Pipe_Write_Stream_BE
-#define  TEMPLATE_BUFFER_TYPE                      const void*
-#define  TEMPLATE_TOKEN                            PIPE_TOKEN_OUT
-#define  TEMPLATE_CLEAR_PIPE()                     Pipe_ClearOUT()
-#define  TEMPLATE_BUFFER_OFFSET(Length)            (Length - 1)
-#define  TEMPLATE_TRANSFER_BYTE(BufferPtr)         Pipe_Write_Byte(*((uint8_t*)BufferPtr--))
-#include "Template/Template_Pipe_RW.c"
-
-#define  TEMPLATE_FUNC_NAME                        Pipe_Write_PStream_BE
-#define  TEMPLATE_BUFFER_TYPE                      const void*
-#define  TEMPLATE_TOKEN                            PIPE_TOKEN_OUT
-#define  TEMPLATE_CLEAR_PIPE()                     Pipe_ClearOUT()
-#define  TEMPLATE_BUFFER_OFFSET(Length)            (Length - 1)
-#define  TEMPLATE_TRANSFER_BYTE(BufferPtr)         Pipe_Write_Byte(pgm_read_byte((uint8_t*)BufferPtr--))
-#include "Template/Template_Pipe_RW.c"
-
-#define  TEMPLATE_FUNC_NAME                        Pipe_Write_EStream_BE
-#define  TEMPLATE_BUFFER_TYPE                      const void*
-#define  TEMPLATE_TOKEN                            PIPE_TOKEN_OUT
-#define  TEMPLATE_CLEAR_PIPE()                     Pipe_ClearOUT()
-#define  TEMPLATE_BUFFER_OFFSET(Length)            (Length - 1)
-#define  TEMPLATE_TRANSFER_BYTE(BufferPtr)         Pipe_Write_Byte(eeprom_read_byte((uint8_t*)BufferPtr--))
-#include "Template/Template_Pipe_RW.c"
-
-#define  TEMPLATE_FUNC_NAME                        Pipe_Read_Stream_LE
-#define  TEMPLATE_BUFFER_TYPE                      void*
-#define  TEMPLATE_TOKEN                            PIPE_TOKEN_IN
-#define  TEMPLATE_CLEAR_PIPE()                     Pipe_ClearIN()
-#define  TEMPLATE_BUFFER_OFFSET(Length)            0
-#define  TEMPLATE_TRANSFER_BYTE(BufferPtr)         *((uint8_t*)BufferPtr++) = Pipe_Read_Byte()
-#include "Template/Template_Pipe_RW.c"
-
-#define  TEMPLATE_FUNC_NAME                        Pipe_Read_EStream_LE
-#define  TEMPLATE_BUFFER_TYPE                      void*
-#define  TEMPLATE_TOKEN                            PIPE_TOKEN_IN
-#define  TEMPLATE_CLEAR_PIPE()                     Pipe_ClearIN()
-#define  TEMPLATE_BUFFER_OFFSET(Length)            0
-#define  TEMPLATE_TRANSFER_BYTE(BufferPtr)         eeprom_update_byte((uint8_t*)BufferPtr++, Pipe_Read_Byte())
-#include "Template/Template_Pipe_RW.c"
-
-#define  TEMPLATE_FUNC_NAME                        Pipe_Read_Stream_BE
-#define  TEMPLATE_BUFFER_TYPE                      void*
-#define  TEMPLATE_TOKEN                            PIPE_TOKEN_IN
-#define  TEMPLATE_CLEAR_PIPE()                     Pipe_ClearIN()
-#define  TEMPLATE_BUFFER_OFFSET(Length)            (Length - 1)
-#define  TEMPLATE_TRANSFER_BYTE(BufferPtr)         *((uint8_t*)BufferPtr--) = Pipe_Read_Byte()
-#include "Template/Template_Pipe_RW.c"
-
-#define  TEMPLATE_FUNC_NAME                        Pipe_Read_EStream_BE
-#define  TEMPLATE_BUFFER_TYPE                      void*
-#define  TEMPLATE_TOKEN                            PIPE_TOKEN_IN
-#define  TEMPLATE_CLEAR_PIPE()                     Pipe_ClearIN()
-#define  TEMPLATE_BUFFER_OFFSET(Length)            (Length - 1)
-#define  TEMPLATE_TRANSFER_BYTE(BufferPtr)         eeprom_update_byte((uint8_t*)BufferPtr--, Pipe_Read_Byte())
-#include "Template/Template_Pipe_RW.c"
 
 #endif

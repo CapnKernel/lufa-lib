@@ -46,20 +46,19 @@
 		#include "MassStorageKeyboard.h"
 		#include "Descriptors.h"
 		#include "DataflashManager.h"
-		#include "SCSI_Codes.h"
 	
 	/* Macros: */
 		/** Macro to set the current SCSI sense data to the given key, additional sense code and additional sense qualifier. This
 		 *  is for convenience, as it allows for all three sense values (returned upon request to the host to give information about
 		 *  the last command failure) in a quick and easy manner.
 		 *
-		 *  \param[in] key    New SCSI sense key to set the sense code to
-		 *  \param[in] acode  New SCSI additional sense key to set the additional sense code to
-		 *  \param[in] aqual  New SCSI additional sense key qualifier to set the additional sense qualifier code to
+		 *  \param[in] Key    New SCSI sense key to set the sense code to
+		 *  \param[in] Acode  New SCSI additional sense key to set the additional sense code to
+		 *  \param[in] Aqual  New SCSI additional sense key qualifier to set the additional sense qualifier code to
 		 */
-		#define SCSI_SET_SENSE(key, acode, aqual)  MACROS{ SenseData.SenseKey = key;              \
-		                                                   SenseData.AdditionalSenseCode = acode; \
-		                                                   SenseData.AdditionalSenseQualifier = aqual; }MACROE
+		#define SCSI_SET_SENSE(Key, Acode, Aqual)  MACROS{ SenseData.SenseKey                 = (Key);   \
+		                                                   SenseData.AdditionalSenseCode      = (Acode); \
+		                                                   SenseData.AdditionalSenseQualifier = (Aqual); }MACROE
 
 		/** Macro for the \ref SCSI_Command_ReadWrite_10() function, to indicate that data is to be read from the storage medium. */
 		#define DATA_READ           true

@@ -153,7 +153,7 @@ void EVENT_USB_Device_ConfigurationChanged(void)
 void EVENT_USB_Device_UnhandledControlRequest(void)
 {
 	/* Determine which interface's Line Coding data is being set from the wIndex parameter */
-	uint8_t* LineEncodingData = (USB_ControlRequest.wIndex == 0) ? (uint8_t*)&LineEncoding1 : (uint8_t*)&LineEncoding2;
+	void* LineEncodingData = (USB_ControlRequest.wIndex == 0) ? &LineEncoding1 : &LineEncoding2;
 
 	/* Process CDC specific control requests */
 	switch (USB_ControlRequest.bRequest)
@@ -161,13 +161,10 @@ void EVENT_USB_Device_UnhandledControlRequest(void)
 		case REQ_GetLineEncoding:
 			if (USB_ControlRequest.bmRequestType == (REQDIR_DEVICETOHOST | REQTYPE_CLASS | REQREC_INTERFACE))
 			{	
-				/* Acknowledge the SETUP packet, ready for data transfer */
 				Endpoint_ClearSETUP();
 
 				/* Write the line coding data to the control endpoint */
-				Endpoint_Write_Control_Stream_LE(LineEncodingData, sizeof(CDC_Line_Coding_t));
-				
-				/* Finalize the stream transfer to send the last packet or clear the host abort */
+				Endpoint_Write_Control_Stream_LE(LineEncodingData, sizeof(CDC_Line_Coding_t));				
 				Endpoint_ClearOUT();
 			}
 			
@@ -175,13 +172,10 @@ void EVENT_USB_Device_UnhandledControlRequest(void)
 		case REQ_SetLineEncoding:
 			if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
 			{
-				/* Acknowledge the SETUP packet, ready for data transfer */
 				Endpoint_ClearSETUP();
 
 				/* Read the line coding data in from the host into the global struct */
 				Endpoint_Read_Control_Stream_LE(LineEncodingData, sizeof(CDC_Line_Coding_t));
-
-				/* Finalize the stream transfer to clear the last packet from the host */
 				Endpoint_ClearIN();
 			}
 	
@@ -189,9 +183,7 @@ void EVENT_USB_Device_UnhandledControlRequest(void)
 		case REQ_SetControlLineState:
 			if (USB_ControlRequest.bmRequestType == (REQDIR_HOSTTODEVICE | REQTYPE_CLASS | REQREC_INTERFACE))
 			{
-				/* Acknowledge the SETUP packet, ready for data transfer */
 				Endpoint_ClearSETUP();
-				
 				Endpoint_ClearStatusStage();
 			}
 	

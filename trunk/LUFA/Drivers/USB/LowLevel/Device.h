@@ -75,10 +75,10 @@
 				 *  USB interface should be initialized in low speed (1.5Mb/s) mode.
 				 *
 				 *  \note Low Speed mode is not available on all USB AVR models.
-				 *        \n\n
+				 *        \n
 				 *
 				 *  \note Restrictions apply on the number, size and type of endpoints which can be used
-				 *        when running in low speed mode -- refer to the USB 2.0 standard.
+				 *        when running in low speed mode - refer to the USB 2.0 specification.
 				 */
 				#define USB_DEVICE_OPT_LOWSPEED            (1 << 0)
 			#endif
@@ -100,7 +100,7 @@
 			 *        issued if the host is currently allowing remote wakeup events from the device (i.e.,
 			 *        the \ref USB_RemoteWakeupEnabled flag is set). When the NO_DEVICE_REMOTE_WAKEUP compile
 			 *        time option is used, this macro is unavailable.
-			 *        \n
+			 *        \n\n
 			 *
 			 *  \note The USB clock must be running for this function to operate. If the stack is initialized with
 			 *        the \ref USB_OPT_MANUAL_PLL option enabled, the user must ensure that the PLL is running
@@ -140,6 +140,14 @@
 			};
 			
 		/* Inline Functions: */
+			/** Returns the current USB frame number, when in device mode. Every millisecond the USB bus is active (i.e. enumerated to a host)
+			 *  the frame number is incremented by one.
+			 */
+			static inline uint16_t USB_Device_GetFrameNumber(void)
+			{
+				return UDFNUM;
+			}
+		
 			/** Enables the device mode Start Of Frame events. When enabled, this causes the
 			 *  \ref EVENT_USB_Device_StartOfFrame() event to fire once per millisecond, synchronized to the USB bus,
 			 *  at the start of each USB frame when enumerated in device mode.
@@ -150,7 +158,7 @@
 				USB_INT_Enable(USB_INT_SOFI);
 			}
 				
-			/** Disables the device mode Start Of Frame events. When disabled, this stop the firing of the
+			/** Disables the device mode Start Of Frame events. When disabled, this stops the firing of the
 			 *  \ref EVENT_USB_Device_StartOfFrame() event when enumerated in device mode.
 			 */
 			static inline void USB_Device_DisableSOFEvents(void) ATTR_ALWAYS_INLINE;
@@ -187,7 +195,7 @@
 			 */
 			uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 			                                    const uint8_t wIndex,
-			                                    void** const DescriptorAddress
+			                                    const void** const DescriptorAddress
 			#if !defined(USE_FLASH_DESCRIPTORS) && !defined(USE_EEPROM_DESCRIPTORS) && !defined(USE_RAM_DESCRIPTORS)
 			                                    , uint8_t* MemoryAddressSpace
 			#endif

@@ -95,10 +95,11 @@
 				 *  after connection before the enumeration process can start or incorrect operation will
 				 *  occur.
 				 *
-				 *  This value may be overridden in the user project makefile as the value of the 
-				 *  HOST_DEVICE_SETTLE_DELAY_MS token, and passed to the compiler using the -D switch.
+				 *  The default delay value may be overridden in the user project makefile by definining the
+				 *  HOST_DEVICE_SETTLE_DELAY_MS token to tbe required delay in milliseconds, and passed to the
+				 *  compiler using the -D switch.
 				 */
-				#define HOST_DEVICE_SETTLE_DELAY_MS        1500
+				#define HOST_DEVICE_SETTLE_DELAY_MS        1000
 			#endif
 
 		/* Enums: */
@@ -139,20 +140,20 @@
 				                                               *   
 				                                               *   \note Do not manually change to this state in the user code.
 				                                               */
-				HOST_STATE_Powered_WaitForDeviceSettle = 4,   /**< Internally implemented by the library. This state indicates
+				HOST_STATE_Powered_WaitForDeviceSettle  = 4,  /**< Internally implemented by the library. This state indicates
 				                                               *   that the stack is waiting for the initial settling period to
 				                                               *   elapse before beginning the enumeration process.
 				                                               *   
 				                                               *   \note Do not manually change to this state in the user code.
 				                                               */
-				HOST_STATE_Powered_WaitForConnect      = 5,   /**< Internally implemented by the library. This state indicates
+				HOST_STATE_Powered_WaitForConnect       = 5,  /**< Internally implemented by the library. This state indicates
 				                                               *   that the stack is waiting for a connection event from the USB
 				                                               *   controller to indicate a valid USB device has been attached to
 				                                               *   the bus and is ready to be enumerated.
 				                                               *   
 				                                               *   \note Do not manually change to this state in the user code.
 				                                               */
-				HOST_STATE_Powered_DoReset             = 6,   /**< Internally implemented by the library. This state indicates
+				HOST_STATE_Powered_DoReset              = 6,  /**< Internally implemented by the library. This state indicates
 				                                               *   that a valid USB device has been attached, and that it is
 				                                               *   will now be reset to ensure it is ready for enumeration.
 				                                               *   
@@ -244,6 +245,33 @@
 			};
 
 		/* Inline Functions: */
+			/** Returns the current USB frame number, when in host mode. Every millisecond the USB bus is active (i.e. not suspended)
+			 *  the frame number is incremented by one.
+			 */
+			static inline uint16_t USB_Host_GetFrameNumber(void)
+			{
+				return UHFNUM;
+			}
+			
+			/** Enables the host mode Start Of Frame events. When enabled, this causes the
+			 *  \ref EVENT_USB_Host_StartOfFrame() event to fire once per millisecond, synchronized to the USB bus,
+			 *  at the start of each USB frame when a device is enumerated while in host mode.
+			 */
+			static inline void USB_Host_EnableSOFEvents(void) ATTR_ALWAYS_INLINE;
+			static inline void USB_Host_EnableSOFEvents(void)
+			{
+				USB_INT_Enable(USB_INT_HSOFI);
+			}
+				
+			/** Disables the host mode Start Of Frame events. When disabled, this stops the firing of the
+			 *  \ref EVENT_USB_Host_StartOfFrame() event when enumerated in host mode.
+			 */
+			static inline void USB_Host_DisableSOFEvents(void) ATTR_ALWAYS_INLINE;
+			static inline void USB_Host_DisableSOFEvents(void)
+			{
+				USB_INT_Disable(USB_INT_HSOFI);
+			}
+
 			/** Resets the USB bus, including the endpoints in any attached device and pipes on the AVR host.
 			 *  USB bus resets leave the default control pipe configured (if already configured).
 			 *
