@@ -129,12 +129,12 @@ int main(void)
 				
 				printf_P(PSTR("Device ID: %s.\r\n"), DeviceIDString);
 				
-				char  TestPageData[]    = "\033%-12345X\033E" "LUFA PCL Test Page" "\033E\033%-12345X";
+				char     TestPageData[] = "\033%-12345X\033E" "LUFA PCL Test Page" "\033E\033%-12345X";
 				uint16_t TestPageLength = strlen(TestPageData);
 			
 				printf_P(PSTR("Sending Test Page (%d bytes)...\r\n"), TestPageLength);
 
-				if (PRNT_Host_SendData(&Printer_PRNT_Interface, &TestPageData, TestPageLength) != PIPE_RWSTREAM_NoError)
+				if (PRNT_Host_SendString(&Printer_PRNT_Interface, &TestPageData, TestPageLength) != PIPE_RWSTREAM_NoError)
 				{
 					puts_P(PSTR("Error Sending Page Data.\r\n"));
 					LEDs_SetAllLEDs(LEDMASK_USB_ERROR);
