@@ -1,6 +1,5 @@
 // TODO: Implement a median filter.
 #define TS
-#define MAPPER
 // 32 bounces a little
 // 128 is mostly ok.  worst test case: dotting
 // 128 gives around 7-8 coords per USB period
@@ -26,10 +25,45 @@
 // #define TS_RAMP
 // #define TS_BULLSEYE
 
+// #define CONFIG_MAP_TO_FULL
+#define CONFIG_MAP_TO_SKRITTER
+
+#if defined(CONFIG_MAP_TO_FULL) || defined(CONFIG_MAP_TO_SKRITTER)
+#define MAPPER
+#endif
+
 // If, after mapping, an axis reading is outside this range,
 // it's likely to be a pen-up condition.
-#define AXIS_MAX 1023
-#define AXIS_MIN 0
+// These values come from my magic spreadsheet
+#ifdef CONFIG_MAP_TO_FULL
+// Full screen
+#  define X_AXIS_MIN 0
+#  define X_AXIS_MAX 1023
+#  define Y_AXIS_MIN 0
+#  define Y_AXIS_MAX 1023
+
+#  define MAP_X_NUMERATOR 25
+#  define MAP_X_DENOM_SHIFT 4
+#  define MAP_X_C -342
+#  define MAP_Y_NUMERATOR 25
+#  define MAP_Y_DENOM_SHIFT 4
+#  define MAP_Y_C -364
+#endif
+
+#ifdef CONFIG_MAP_TO_SKRITTER
+// Skritter square
+#  define X_AXIS_MIN 237
+#  define X_AXIS_MAX 516
+#  define Y_AXIS_MIN 400
+#  define Y_AXIS_MAX 916
+
+#  define MAP_X_NUMERATOR 14
+#  define MAP_X_DENOM_SHIFT 5
+#  define MAP_X_C 142
+#  define MAP_Y_NUMERATOR 25
+#  define MAP_Y_DENOM_SHIFT 5
+#  define MAP_Y_C 214
+#endif
 
 #ifdef CONFIG_BUTTON
 // Set PB6 for input, with pullup enabled
@@ -280,20 +314,19 @@ static bool read_XY(Coords *c)
 static void map(Coords *c)
 {
 #ifdef MAPPER
-	// These values come from my magic spreadsheet
-	c->x *= 25;
-	c->x >>= 4;
-	c->x += -342;
-	c->y *= 25;
-	c->y >>= 4;
-	c->y += -364;
+	c->x *= MAP_X_NUMERATOR;
+	c->x >>= MAP_X_DENOM_SHIFT;
+	c->x += MAP_X_C;
+	c->y *= MAP_Y_NUMERATOR;
+	c->y >>= MAP_Y_DENOM_SHIFT;
+	c->y += MAP_Y_C;
 #endif
 }
 
 #ifdef CONFIG_PEN_DOWN
 static bool inBox(Coords *c)
 {
-	return c->x >= 0 && c->x <= AXIS_MAX && c->y >= 0 && c->y <= AXIS_MAX;
+	return c->x >= X_AXIS_MIN && c->x <= X_AXIS_MAX && c->y >= Y_AXIS_MIN && c->y <= Y_AXIS_MAX;
 }
 #endif
 
