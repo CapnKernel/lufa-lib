@@ -55,6 +55,8 @@ USB_Descriptor_HIDReport_Datatype_t PROGMEM MouseReport[] =
 	0x05, 0x09,          /*     Usage Page (Button)                  */
 	0x19, 0x01,          /*     Usage Minimum (Button 1)             */
 	0x29, 0x01,          /*     Usage Maximum (Button 1)             */
+    0x35, 0x00,          /*     Physical Minimum (0)                 */
+    0x46, 0xFF, 0x03,    /*     Physical Maximum (1023)              */
 	0x15, 0x00,          /*     Logical Minimum (0)                  */
 	0x25, 0x01,          /*     Logical Maximum (1)                  */
 	0x81, 0x02,          /*     Input (Data, Variable, Absolute)     */
