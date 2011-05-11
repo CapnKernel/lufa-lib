@@ -1,21 +1,21 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2010.
-              
+     Copyright (C) Dean Camera, 2011.
+
   dean [at] fourwalledcubicle [dot] com
-      www.fourwalledcubicle.com
+           www.lufa-lib.org
 */
 
 /*
-  Copyright 2010  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
-  Permission to use, copy, modify, distribute, and sell this 
+  Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
-  without fee, provided that the above copyright notice appear in 
+  without fee, provided that the above copyright notice appear in
   all copies and that both that the copyright notice and this
-  permission notice and warranty disclaimer appear in supporting 
-  documentation, and that the name of the author not be used in 
-  advertising or publicity pertaining to distribution of the 
+  permission notice and warranty disclaimer appear in supporting
+  documentation, and that the name of the author not be used in
+  advertising or publicity pertaining to distribution of the
   software without specific, written prior permission.
 
   The author disclaim all warranties with regard to this
@@ -32,13 +32,12 @@
  *
  *  Header file for Descriptors.c.
  */
- 
+
 #ifndef _DESCRIPTORS_H_
 #define _DESCRIPTORS_H_
 
 	/* Includes: */
 		#include <LUFA/Drivers/USB/USB.h>
-		#include <LUFA/Drivers/USB/Class/HID.h>
 
 		#include <avr/pgmspace.h>
 
@@ -54,11 +53,11 @@
 			USB_HID_Descriptor_HID_t              HID_MouseHID;
 	        USB_Descriptor_Endpoint_t             HID_ReportINEndpoint;
 		} USB_Descriptor_Configuration_t;
-					
+
 	/* Macros: */
 		/** Endpoint number of the Mouse HID reporting IN endpoint. */
 		#define MOUSE_EPNUM               1
-		
+
 		/** Size in bytes of the Mouse HID reporting IN endpoint. */
 		#define MOUSE_EPSIZE              8
 
@@ -69,3 +68,4 @@
 		                                    ATTR_WARN_UNUSED_RESULT ATTR_NON_NULL_PTR_ARG(3);
 
 #endif
+

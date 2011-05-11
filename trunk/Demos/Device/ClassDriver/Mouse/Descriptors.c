@@ -1,21 +1,21 @@
 /*
              LUFA Library
-     Copyright (C) Dean Camera, 2010.
-              
+     Copyright (C) Dean Camera, 2011.
+
   dean [at] fourwalledcubicle [dot] com
-      www.fourwalledcubicle.com
+           www.lufa-lib.org
 */
 
 /*
-  Copyright 2010  Dean Camera (dean [at] fourwalledcubicle [dot] com)
+  Copyright 2011  Dean Camera (dean [at] fourwalledcubicle [dot] com)
 
-  Permission to use, copy, modify, distribute, and sell this 
+  Permission to use, copy, modify, distribute, and sell this
   software and its documentation for any purpose is hereby granted
-  without fee, provided that the above copyright notice appear in 
+  without fee, provided that the above copyright notice appear in
   all copies and that both that the copyright notice and this
-  permission notice and warranty disclaimer appear in supporting 
-  documentation, and that the name of the author not be used in 
-  advertising or publicity pertaining to distribution of the 
+  permission notice and warranty disclaimer appear in supporting
+  documentation, and that the name of the author not be used in
+  advertising or publicity pertaining to distribution of the
   software without specific, written prior permission.
 
   The author disclaim all warranties with regard to this
@@ -30,9 +30,9 @@
 
 /** \file
  *
- *  USB Device Descriptors, for library use when in USB device mode. Descriptors are special 
+ *  USB Device Descriptors, for library use when in USB device mode. Descriptors are special
  *  computer-readable structures which the host requests upon device enumeration, to determine
- *  the device's capabilities and functions.  
+ *  the device's capabilities and functions.
  */
 
 #include "Descriptors.h"
@@ -43,38 +43,17 @@
  *  the device will send, and what it may be sent back from the host. Refer to the HID specification for
  *  more details on HID report descriptors.
  */
-USB_Descriptor_HIDReport_Datatype_t PROGMEM MouseReport[] =
+const USB_Descriptor_HIDReport_Datatype_t PROGMEM MouseReport[] =
 {
-	0x05, 0x01,          /* Usage Page (Generic Desktop)             */
-	0x09, 0x02,          /* Usage (Mouse)                            */
-	0xA1, 0x01,          /* Collection (Application)                 */
-	0x09, 0x01,          /*   Usage (Pointer)                        */
-	0xA1, 0x00,          /*   Collection (Application)               */
-	0x95, 0x01,          /*     Report Count (1)                     */
-	0x75, 0x01,          /*     Report Size (1)                      */
-	0x05, 0x09,          /*     Usage Page (Button)                  */
-	0x19, 0x01,          /*     Usage Minimum (Button 1)             */
-	0x29, 0x01,          /*     Usage Maximum (Button 1)             */
-    0x35, 0x00,          /*     Physical Minimum (0)                 */
-    0x46, 0xFF, 0x03,    /*     Physical Maximum (1023)              */
-	0x15, 0x00,          /*     Logical Minimum (0)                  */
-	0x25, 0x01,          /*     Logical Maximum (1)                  */
-	0x81, 0x02,          /*     Input (Data, Variable, Absolute)     */
-
-	0x95, 0x01,          /*     Report Count (1)                     */
-	0x75, 0x07,          /*     Report Size (7)                      */
-	0x81, 0x01,          /*     Input (Constant)                     */
-
-	0x75, 0x10,          /*     Report Size (16)                     */
-	0x95, 0x02,          /*     Report Count (2)                     */
-	0x05, 0x01,          /*     Usage Page (Generic Desktop Control) */
-	0x09, 0x30,          /*     Usage X                              */
-	0x09, 0x31,          /*     Usage Y                              */
-	0x15, 0x00,          /*     Logical Minimum (0)                  */
-	0x26, 0xFF, 0x03,    /*     Logical Maximum (1023)               */
-	0x81, 0x02,          /*     Input (Data, Variable, Absolute)     */
-	0xC0,                /*   End Collection                         */
-	0xC0                 /* End Collection                           */
+	/* Use the HID class driver's standard Mouse report.
+	 *   Min X/Y Axis values: -1
+	 *   Max X/Y Axis values:  1
+	 *   Min physical X/Y Axis values (used to determine resolution): -1
+	 *   Max physical X/Y Axis values (used to determine resolution):  1
+	 *   Buttons: 3
+	 *   Absolute screen coordinates: false
+	 */
+	HID_DESCRIPTOR_MOUSE(0, 1024, 0, 1024, 1, true)
 };
 
 /** Device descriptor structure. This descriptor, located in FLASH memory, describes the overall
@@ -82,25 +61,25 @@ USB_Descriptor_HIDReport_Datatype_t PROGMEM MouseReport[] =
  *  number of device configurations. The descriptor is read out by the USB host when the enumeration
  *  process begins.
  */
-USB_Descriptor_Device_t PROGMEM DeviceDescriptor =
+const USB_Descriptor_Device_t PROGMEM DeviceDescriptor =
 {
 	.Header                 = {.Size = sizeof(USB_Descriptor_Device_t), .Type = DTYPE_Device},
-		
+
 	.USBSpecification       = VERSION_BCD(01.10),
-	.Class                  = 0x00,
-	.SubClass               = 0x00,
-	.Protocol               = 0x00,
-				
+	.Class                  = USB_CSCP_NoDeviceClass,
+	.SubClass               = USB_CSCP_NoDeviceSubclass,
+	.Protocol               = USB_CSCP_NoDeviceProtocol,
+
 	.Endpoint0Size          = FIXED_CONTROL_ENDPOINT_SIZE,
-		
+
 	.VendorID               = 0x03EB,
 	.ProductID              = 0x2041,
-	.ReleaseNumber          = 0x0000,
-		
+	.ReleaseNumber          = VERSION_BCD(00.01),
+
 	.ManufacturerStrIndex   = 0x01,
 	.ProductStrIndex        = 0x02,
 	.SerialNumStrIndex      = NO_DESCRIPTOR,
-		
+
 	.NumberOfConfigurations = FIXED_NUM_CONFIGURATIONS
 };
 
@@ -109,58 +88,58 @@ USB_Descriptor_Device_t PROGMEM DeviceDescriptor =
  *  and endpoints. The descriptor is read out by the USB host during the enumeration process when selecting
  *  a configuration so that the host may correctly communicate with the USB device.
  */
-USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
+const USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
 {
-	.Config = 
+	.Config =
 		{
 			.Header                 = {.Size = sizeof(USB_Descriptor_Configuration_Header_t), .Type = DTYPE_Configuration},
 
 			.TotalConfigurationSize = sizeof(USB_Descriptor_Configuration_t),
 			.TotalInterfaces        = 1,
-				
+
 			.ConfigurationNumber    = 1,
 			.ConfigurationStrIndex  = NO_DESCRIPTOR,
-				
+
 			.ConfigAttributes       = (USB_CONFIG_ATTR_BUSPOWERED | USB_CONFIG_ATTR_SELFPOWERED),
-			
+
 			.MaxPowerConsumption    = USB_CONFIG_POWER_MA(100)
 		},
-		
-	.HID_Interface = 
+
+	.HID_Interface =
 		{
 			.Header                 = {.Size = sizeof(USB_Descriptor_Interface_t), .Type = DTYPE_Interface},
 
 			.InterfaceNumber        = 0x00,
 			.AlternateSetting       = 0x00,
-			
+
 			.TotalEndpoints         = 1,
-				
-			.Class                  = 0x03,
-			.SubClass               = 0x01,
-			.Protocol               = HID_BOOT_MOUSE_PROTOCOL,
-				
+
+			.Class                  = HID_CSCP_HIDClass,
+			.SubClass               = HID_CSCP_BootSubclass,
+			.Protocol               = HID_CSCP_MouseBootProtocol,
+
 			.InterfaceStrIndex      = NO_DESCRIPTOR
 		},
 
-	.HID_MouseHID = 
+	.HID_MouseHID =
 		{
-			.Header                 = {.Size = sizeof(USB_HID_Descriptor_HID_t), .Type = DTYPE_HID},
+			.Header                 = {.Size = sizeof(USB_HID_Descriptor_HID_t), .Type = HID_DTYPE_HID},
 
 			.HIDSpec                = VERSION_BCD(01.11),
 			.CountryCode            = 0x00,
 			.TotalReportDescriptors = 1,
-			.HIDReportType          = DTYPE_Report,
+			.HIDReportType          = HID_DTYPE_Report,
 			.HIDReportLength        = sizeof(MouseReport)
 		},
 
-	.HID_ReportINEndpoint = 
+	.HID_ReportINEndpoint =
 		{
 			.Header                 = {.Size = sizeof(USB_Descriptor_Endpoint_t), .Type = DTYPE_Endpoint},
 
 			.EndpointAddress        = (ENDPOINT_DESCRIPTOR_DIR_IN | MOUSE_EPNUM),
 			.Attributes             = (EP_TYPE_INTERRUPT | ENDPOINT_ATTR_NO_SYNC | ENDPOINT_USAGE_DATA),
 			.EndpointSize           = MOUSE_EPSIZE,
-			.PollingIntervalMS      = 0x0A
+			.PollingIntervalMS      = 0x01
 		}
 };
 
@@ -168,10 +147,10 @@ USB_Descriptor_Configuration_t PROGMEM ConfigurationDescriptor =
  *  the string descriptor with index 0 (the first index). It is actually an array of 16-bit integers, which indicate
  *  via the language ID table available at USB.org what languages the device supports for its string descriptors.
  */
-USB_Descriptor_String_t PROGMEM LanguageString =
+const USB_Descriptor_String_t PROGMEM LanguageString =
 {
 	.Header                 = {.Size = USB_STRING_LEN(1), .Type = DTYPE_String},
-		
+
 	.UnicodeString          = {LANGUAGE_ID_ENG}
 };
 
@@ -179,10 +158,10 @@ USB_Descriptor_String_t PROGMEM LanguageString =
  *  form, and is read out upon request by the host when the appropriate string ID is requested, listed in the Device
  *  Descriptor.
  */
-USB_Descriptor_String_t PROGMEM ManufacturerString =
+const USB_Descriptor_String_t PROGMEM ManufacturerString =
 {
 	.Header                 = {.Size = USB_STRING_LEN(11), .Type = DTYPE_String},
-		
+
 	.UnicodeString          = L"Dean Camera"
 };
 
@@ -190,10 +169,10 @@ USB_Descriptor_String_t PROGMEM ManufacturerString =
  *  and is read out upon request by the host when the appropriate string ID is requested, listed in the Device
  *  Descriptor.
  */
-USB_Descriptor_String_t PROGMEM ProductString =
+const USB_Descriptor_String_t PROGMEM ProductString =
 {
 	.Header                 = {.Size = USB_STRING_LEN(15), .Type = DTYPE_String},
-		
+
 	.UnicodeString          = L"LUFA Mouse Demo"
 };
 
@@ -239,19 +218,19 @@ uint16_t CALLBACK_USB_GetDescriptor(const uint16_t wValue,
 					Size    = pgm_read_byte(&ProductString.Header.Size);
 					break;
 			}
-			
+
 			break;
-		case DTYPE_HID: 
+		case HID_DTYPE_HID:
 			Address = &ConfigurationDescriptor.HID_MouseHID;
 			Size    = sizeof(USB_HID_Descriptor_HID_t);
 			break;
-		case DTYPE_Report: 
+		case HID_DTYPE_Report:
 			Address = &MouseReport;
 			Size    = sizeof(MouseReport);
 			break;
 	}
-	
-	*DescriptorAddress = Address;		
+
+	*DescriptorAddress = Address;
 	return Size;
 }
 
