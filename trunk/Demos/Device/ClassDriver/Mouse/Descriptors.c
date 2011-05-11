@@ -45,6 +45,9 @@
  */
 const USB_Descriptor_HIDReport_Datatype_t PROGMEM MouseReport[] =
 {
+	// FIXME: does the macro-using descriptor still work?
+	// FIXME: Redo these docs to match what happens with the touchscreen.
+	// FIXME: Touchscreen is absolute coords (0..1023, 0..1023), and one button
 	/* Use the HID class driver's standard Mouse report.
 	 *   Min X/Y Axis values: -1
 	 *   Max X/Y Axis values:  1

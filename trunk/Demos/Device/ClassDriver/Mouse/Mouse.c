@@ -127,6 +127,8 @@
  *  0=0V, 5=5V, P=pulled high via 10k to Vcc, A=ADC input 
  */
 
+#include <util/atomic.h>
+
 #include <LUFA/Drivers/Peripheral/ADC.h>
 
 #include "Mouse.h"
